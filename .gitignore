@@ -1,0 +1,7 @@
+**/bin/
+**/obj/
+**/data/
+dist/
+.vs/
+*.user
+*.tmp
