@@ -16,6 +16,7 @@ public sealed class MainWindow : DialogWindow
     private readonly Grid table = new();
     private readonly Button more = Ui.Button("", () => { }, "设置");
     private bool rendering;
+    private (string? Name, string? Fingerprint, int Week)? renderedTable;
     private DateTime lastWheel;
     private int wheelDelta;
     public MainWindow(WorkspaceViewModel viewModel) : base("课程表", 600, 600, false)
@@ -69,6 +70,8 @@ public sealed class MainWindow : DialogWindow
         var body = new DockPanel(); DockPanel.SetDock(toolbar, Dock.Top); body.Children.Add(toolbar);
         DockPanel.SetDock(status, Dock.Top); body.Children.Add(status);
         var board = Ui.Card(table); board.Padding = new Thickness(0);
+        // Border.CornerRadius does not clip its child; keep the grid inside the inner edge.
+        table.SizeChanged += (_, e) => table.Clip = new RectangleGeometry(new Rect(e.NewSize), 11, 11);
         board.PreviewMouseWheel += (_, e) =>
         {
             e.Handled = true; wheelDelta += e.Delta;
@@ -101,14 +104,17 @@ public sealed class MainWindow : DialogWindow
     private void Render()
     {
         rendering = true;
-        students.ItemsSource = vm.Names; students.SelectedItem = vm.Current?.Name;
+        if (students.ItemsSource is not IEnumerable<string> names || !names.SequenceEqual(vm.Names)) students.ItemsSource = vm.Names;
+        students.SelectedItem = vm.Current?.Name;
         weekLabel.Text = vm.Title; status.Text = vm.TermStatus;
         status.Visibility = status.Text.Length == 0 ? Visibility.Collapsed : Visibility.Visible;
-        table.Children.Clear(); table.RowDefinitions.Clear(); table.ColumnDefinitions.Clear();
         rendering = false;
+        var key = (vm.Current?.Name, vm.Current?.Fingerprint, vm.Week);
+        if (renderedTable == key) return;
+        table.Children.Clear(); table.RowDefinitions.Clear(); table.ColumnDefinitions.Clear();
         if (vm.Document is null)
         {
-            table.Children.Add(Ui.Column(Ui.Text("欢迎使用课程表", 22), Ui.Note("从设置齿轮菜单进入学生管理新增学生，然后通过总体设置调整学期与课程模式。"))); return;
+            table.Children.Add(Ui.Column(Ui.Text("欢迎使用课程表", 22), Ui.Note("从设置齿轮菜单进入学生管理新增学生，然后通过总体设置调整学期与课程模式。"))); renderedTable = key; return;
         }
         var s = vm.Document.Settings;
         table.ColumnDefinitions.Add(new() { Width = new GridLength(78) });
@@ -142,6 +148,7 @@ public sealed class MainWindow : DialogWindow
                 Grid.SetColumn(block, Array.IndexOf(days, slot.DayOfWeek) + 1); Grid.SetRow(block, slot.StartPeriod); Grid.SetRowSpan(block, s.ClassesUnit == "two" ? 2 : 1);
                 block.MouseLeftButtonDown += (_, e) => { if (e.ClickCount == 2) { Edit(course.Id); e.Handled = true; } }; table.Children.Add(block);
             }
+        renderedTable = key;
     }
     private static TextBlock Centered(string text) => new() { Text = text, TextAlignment = TextAlignment.Center, TextWrapping = TextWrapping.Wrap, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(2), FontSize = 12 };
     private Border Put(UIElement element, int row, int col, bool shaded = false)

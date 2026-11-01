@@ -6,6 +6,8 @@
 
 ## 阅读顺序
 
+最新定向验证见[主窗口稳定性与课程编辑布局](verification/2026-11-02-layout-stability.md)；待提交修改汇总见根目录[待提交日志](../CHANGELOG_PENDING.md)，提交工作约定见[项目说明](../README.md#待提交日志约定)。
+
 1. [产品与交互需求](requirements/requirements.md)：已确认的功能范围与界面规则。
 2. [数据格式](requirements/data-model.md)：JSON字段、完整示例和保存约束。
 3. [验收清单](requirements/acceptance.md)：实现后应逐项验证的行为。

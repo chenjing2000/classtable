@@ -23,6 +23,7 @@ internal static class Program
         // Load the real theme without running production startup or opening user data.
         var app = new Application { ShutdownMode = ShutdownMode.OnExplicitShutdown };
         app.Resources = new ResourceDictionary { Source = new Uri("pack://application:,,,/ClassSchedule;component/Resources/Theme.xaml") };
+        if (args.Contains("--layout-stability")) return LayoutStabilityChecks.Run(app);
         if (args.Contains("--compact-slots")) return CompactSlotChecks.Run(app);
         if (args.Contains("--duration-selector")) return DurationAndSelectorChecks.Run(app);
         if (args.Contains("--course-reminders")) return CourseReminderChecks.Run(app, args.Contains("--preview"), args.Contains("--sound-smoke"));

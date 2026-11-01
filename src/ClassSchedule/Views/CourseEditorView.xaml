@@ -3,7 +3,7 @@
   <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
   <ContentControl x:Name="Fields"/>
   <DockPanel Grid.Row="1">
-   <Button x:Name="AddSlot" Content="＋" DockPanel.Dock="Right" HorizontalAlignment="Right" Width="32" Height="32" MinHeight="0" Padding="0" FontSize="18" ToolTip="新增上课时段" AutomationProperties.Name="新增上课时段"/>
+   <Button x:Name="AddSlot" Content="＋" DockPanel.Dock="Right" HorizontalAlignment="Right" VerticalAlignment="Center" Width="24" Height="24" MinHeight="0" Padding="0" FontSize="16" ToolTip="新增上课时段" AutomationProperties.Name="新增上课时段"/>
    <TextBlock Text="上课时段设置" FontSize="18" Margin="4,8,4,4" VerticalAlignment="Center"/>
   </DockPanel>
   <Grid x:Name="TableHost" Grid.Row="2" Margin="4,4,4,8">

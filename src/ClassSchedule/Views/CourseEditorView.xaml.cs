@@ -20,7 +20,7 @@ public partial class CourseEditorView : UserControl
         var count = Ui.NumberInput(nameof(vm.ReminderCount), 2, message => (Window.GetWindow(this) as DialogWindow)?.Messages.Enqueue(message)); count.Width = 48; count.MinWidth = 0; count.TextAlignment = TextAlignment.Center;
         var interval = Ui.NumberInput(nameof(vm.ReminderIntervalMinutes), 3, message => (Window.GetWindow(this) as DialogWindow)?.Messages.Enqueue(message)); interval.Width = 48; interval.MinWidth = 0; interval.TextAlignment = TextAlignment.Center;
         var duration = Ui.NumberInput(nameof(vm.ReminderDurationMinutes), 3, message => (Window.GetWindow(this) as DialogWindow)?.Messages.Enqueue(message)); duration.Width = 48; duration.MinWidth = 0; duration.TextAlignment = TextAlignment.Center;
-        var fields = Ui.Column(Ui.Form(78, ("课程名称", nameField)), Ui.Row(Ui.Label("提醒次数"), count, Ui.Label("间隔"), interval, Ui.Label("分钟，时长"), duration, Ui.Label("分钟")));
+        var fields = Ui.Form(78, ("课程名称", nameField), ("提醒次数", Ui.Row(count, Ui.Label("次，间隔"), interval, Ui.Label("分钟，时长"), duration, Ui.Label("分钟"))));
         var table = Table; table.ItemsSource = vm.Rows;
         TableHost.SizeChanged += (_, e) => table.Height = Math.Min(table.ColumnHeaderHeight + table.RowHeight * 5 + 2, e.NewSize.Height);
         Ui.TextColumn(table, "上课周次", "Weeks"); Ui.TextColumn(table, "时间", "Time"); Ui.TextColumn(table, "上课地点", "Location"); Ui.TextColumn(table, "提前提醒", "ReminderMinutes");
