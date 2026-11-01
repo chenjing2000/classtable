@@ -1,0 +1,12 @@
+<local:DialogWindow x:Class="ClassSchedule.Views.StudentWorkspaceWindow"
+ xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+ xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:local="clr-namespace:ClassSchedule.Views">
+ <Grid>
+  <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+  <Grid x:Name="PageHeading" Grid.Row="0" Margin="0,0,0,6">
+   <Button x:Name="BackButton" Content="‹ 返回课程列表" HorizontalAlignment="Left" Click="Back_Click"/>
+   <TextBlock x:Name="Heading" FontSize="20" Margin="6,4" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+  </Grid>
+  <ContentControl x:Name="PageContent" Grid.Row="1"/>
+ </Grid>
+</local:DialogWindow>

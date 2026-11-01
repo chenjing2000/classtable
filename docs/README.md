@@ -1,6 +1,8 @@
-# 学生课程表文档
+# 课程表文档
 
-第一版范围：Windows WPF + 简单 MVVM，学生单学期、每日8/10节、每人统一单节或双节。当前包含600 DIP紧凑界面、仅姓名新增学生、零课程可改模式及四列分组管理表。运行见[项目说明](../README.md)，最新结果见[代码审查记录](verification/2026-10-30-code-review.md)，历史结果见[运行时发布验证](verification/2026-10-30-framework-dependent.md)、[内容高度验证](verification/2026-10-30-content-fit.md)、[统一UI验证](verification/2026-10-30-unified-ui.md)、[课程分组验证](verification/2026-10-30-grouped-course-table.md)、[学生管理验证](verification/2026-10-29-student-management.md)、[紧凑界面验证](verification/2026-10-29-compact-ui.md)和[初版验证](verification/2026-10-29.md)。
+第一版范围：Windows WPF + 简单 MVVM，学生单学期、每日8/10节、每人统一单节或双节。当前主窗口600 DIP、课程管理520 DIP，设置与课程独立管理，独立学生管理支持新增/改名/删除和四列分组表。运行见[项目说明](../README.md)，最新结果见[五行时段表验证](verification/2026-11-01-compact-slots.md)，此前见[提醒时长与姓名框验证](verification/2026-11-01-duration-selector.md)，此前见[课程提醒与schema2验证](verification/2026-11-01-course-reminders.md)，此前见[单实例与界面修订验证](verification/2026-11-01-activation-and-student-list.md)，此前见[学生管理与改名验证](verification/2026-11-01-student-management-rename.md)，此前见[设置菜单与分窗验证](verification/2026-11-01-compact-settings-menu.md)，历史结果见[三类窗口验证](verification/2026-10-30-three-windows.md)、[代码审查记录](verification/2026-10-30-code-review.md)、[运行时发布验证](verification/2026-10-30-framework-dependent.md)、[内容高度验证](verification/2026-10-30-content-fit.md)、[统一UI验证](verification/2026-10-30-unified-ui.md)、[课程分组验证](verification/2026-10-30-grouped-course-table.md)、[学生管理验证](verification/2026-10-29-student-management.md)、[紧凑界面验证](verification/2026-10-29-compact-ui.md)和[初版验证](verification/2026-10-29.md)。
+
+当前调整见[设置菜单与分窗方案](design/compact-settings-menu-plan.md)，此前的[简洁主界面方案](design/simplified-workspace-plan.md)保留作为演进记录。未穷举的视觉验证范围在方案与验证记录中明确列出。
 
 ## 阅读顺序
 

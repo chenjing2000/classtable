@@ -16,9 +16,9 @@
 最终构建零警告、零错误。26组核心检查及55项STA线程WPF控件检查通过：
 
 ```powershell
-dotnet build ClassTimetable.sln -m:1 --no-restore --nologo
-dotnet tests/ClassTimetable.Tests/bin/Debug/net10.0/ClassTimetable.Tests.dll
-dotnet tests/ClassTimetable.UiChecks/bin/Debug/net10.0-windows/ClassTimetable.UiChecks.dll
+dotnet build ClassSchedule.sln -m:1 --no-restore --nologo
+dotnet tests/ClassSchedule.Tests/bin/Debug/net10.0/ClassSchedule.Tests.dll
+dotnet tests/ClassSchedule.UiChecks/bin/Debug/net10.0-windows/ClassSchedule.UiChecks.dll
 ```
 
 新增覆盖：模式0课程可改/有课程禁改/先删除保存后可改、同次删除改模式拒绝；新建默认姓名/单节/周一锚点；学生切换重新读取各自JSON；编码单/双节往返、周日07、10节、非规范前导零、周次和节次越界、非法配对、ASCII及数值排序；刷新无确认和成功消息；日历翻月不改选日或页面位置；下拉4项与细滚动条、拖动滚动条只滚动选项不改值、滚轮转发页面并收起；管理表空白/行/表头双击及两个底部按钮。

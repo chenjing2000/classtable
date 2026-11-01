@@ -18,9 +18,9 @@
 最终执行：
 
 ```powershell
-dotnet build ClassTimetable.sln -m:1 -p:NuGetAudit=false --nologo
-dotnet tests/ClassTimetable.Tests/bin/Debug/net10.0/ClassTimetable.Tests.dll
-dotnet tests/ClassTimetable.UiChecks/bin/Debug/net10.0-windows/ClassTimetable.UiChecks.dll
+dotnet build ClassSchedule.sln -m:1 -p:NuGetAudit=false --nologo
+dotnet tests/ClassSchedule.Tests/bin/Debug/net10.0/ClassSchedule.Tests.dll
+dotnet tests/ClassSchedule.UiChecks/bin/Debug/net10.0-windows/ClassSchedule.UiChecks.dll
 ./Publish.ps1 -Offline
 ```
 

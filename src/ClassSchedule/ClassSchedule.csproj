@@ -1,0 +1,4 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><OutputType>WinExe</OutputType><TargetFramework>net10.0-windows</TargetFramework><UseWPF>true</UseWPF><SelfContained>false</SelfContained><AssemblyName>ClassSchedule</AssemblyName><ApplicationIcon>../../Bee.ico</ApplicationIcon><ApplicationManifest>app.manifest</ApplicationManifest></PropertyGroup>
+  <ItemGroup><ProjectReference Include="../ClassSchedule.Core/ClassSchedule.Core.csproj" /></ItemGroup>
+<ItemGroup><Resource Include="Resources/Bee.png" /></ItemGroup></Project>

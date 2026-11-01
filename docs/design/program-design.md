@@ -1,4 +1,6 @@
-# 学生课程表第一版设计方案
+> 当前学生管理、标识及滚轮规则以[最新实施计划](student-management-rename-plan.md)为准；设置分窗参见[设置菜单与分窗方案](compact-settings-menu-plan.md)；此前[三类窗口方案](simplified-workspace-plan.md)的课程切页与草稿规则保留，跨设置/课程导航已取消。
+
+# 课程表第一版设计方案
 
 状态：用户要求开始后，第一版已按此方案实现。验证范围见[验证记录](../verification/2026-10-29.md)。
 
@@ -17,11 +19,11 @@ Windows 桌面程序，用于学生查看和编辑单学期课程表。严格支
 - 采用 WPF + 简单 MVVM。与用户确认一致；不采用 WinUI 3，减少本项目的部署及窗口行为复杂度。
 - 采用每学生一份 UTF-8 JSON，无数据库和共享 settings.json。便于备份和检查，代价是必须处理文件损坏、外部修改和安全替换。
 - 采用普通模型、具体业务类和具体存储类，手动组装对象。不引入 MVVM 框架、DI 容器、消息总线、通用仓储或插件体系。
-- 设置集中一页；保留四类核心窗口，并增加轻量的新增学生与管理课程窗口。课程时段继续用独立子窗口编辑。
+- 设置集中一页；主窗口、总体设置、课程管理、学生管理各自负责单一任务。课程时段继续用独立子窗口编辑。
 
 ## 3. 数据契约
 
-路径固定为 `AppContext.BaseDirectory/data/姓名.json`，不使用进程工作目录。显示姓名唯一取自文件名，不保存重复的 studentName。每份文档顶层为 schemaVersion、settings、courses，schemaVersion=1。
+路径固定为 `AppContext.BaseDirectory/data/姓名.json`，不使用进程工作目录。显示姓名唯一取自文件名，不保存重复的 studentName。每份文档顶层为 schemaVersion、settings、courses，schemaVersion=2，旧格式拒绝加载。
 
 ### settings
 
@@ -43,7 +45,7 @@ classPeriods是实际课时的唯一依据；timeGeneration仅供主动生成使
 
 ### courses 和 schedules
 
-课程字段为 id（GUID）、name（非空）、color（#RRGGBB）、note（空值统一空字符串）、schedules（至少一项）。同名课程允许存在，身份和颜色绑定按 ID，不按姓名或课程名推断。
+课程字段为 id（GUID）、name（非空）、color（#RRGGBB，只读展示）、reminderCount（默认3）、reminderIntervalMinutes（默认3）、reminderDurationMinutes（默认1）、schedules（至少一项）。note已移除。同名课程允许存在，身份和颜色绑定按 ID，不按姓名或课程名推断。
 
 时段字段为 id（GUID）、weeks（升序无重复整数数组，非空且位于1..totalWeeks）、dayOfWeek（周一1至周日7）、startPeriod、location（可为 ""）。two 模式仅允许1/3/5/7及10节时的9；one模式允许全部合法节次。不保存时段级单双节、结束节次或重复的实际日期。
 
@@ -81,17 +83,17 @@ previous 按周一到周日排列，next 按周日到周六排列。顶部只显
 
 ### 主窗口
 
-- 无右侧课程栏。学生选择框无三角；右侧紧邻刷新和设置图标，均有 tooltip 和键盘焦点。
-- 新增学生、管理课程为明确的轻量文字入口，不放进课程网格。
+- 无右侧课程栏。学生选择框无三角，显示与下拉外框均88 DIP；右侧为周次文本、本周和矢量设置齿轮。
+- 齿轮圆角菜单依次为总体设置、课程管理、学生管理、更新学生信息；末项执行学生文件扫描与重载，保留错误提示和当前周次。
 - 课程块只显示名称和地点，双节跨两行，同课同色。长文本截断并提供 tooltip。
 - 空格双击新建，预填星期、配对节次和当前浏览周；默认 weeks 为当前浏览周，用户再调整。已有块双击编辑整门课程。
 - 学生切换重新计算本周，不保存上次浏览周。刷新保持现有浏览周，若参数改变则夹取合法周次。
 - 当前文件删除：选择按姓名稳定排序的首个有效学生并提示；全空则显示新增入口。非法文件不列为可切换学生，提示文件名和原因，不阻塞其他合法学生。
-- 管理课程用课程名/周次/时间/地点四列，按课程ID聚拢时段并纵向合并名称；实际行双击编辑、内容区空白双击新建，不依赖旧选择；表头和滚动条排除。下方仅新建/删除，Esc或标题栏关闭，无须切到课程实际出现的周。编码由核心CourseTimeCode生成/解码，规则见数据格式文档，JSON不重复存储。
+- 管理课程用课程名/周次/时间/地点四列，按课程ID聚拢时段并纵向合并名称；实际行双击编辑、内容区空白双击新建，不依赖旧选择；表头和滚动条排除。下方新建/删除/确定，确定或Esc/标题栏关闭，无须切到课程实际出现的周。编码由核心CourseTimeCode生成/解码，规则见数据格式文档，JSON不重复存储。
 
 ### 新增学生
 
-独立姓名小窗，默认蜡笔小新，只输入姓名，不显示基本信息、课时参数和课时预览；点击创建后以默认配置保存完整文档，取消不留下半成品。默认单节、每日8节、20周、周日previous、第一周周一为当前自然周周一；之后通过总体设置调整。校验Windows文件名、保留名、尾随点/空格、路径分隔符和忽略大小写重名，不写出data目录。不提供重命名、删除学生功能。
+独立StudentManagementWindow，列表与姓名框共用，新增/更新/删除。新增默认单节、每日8节、20周，第一周周一取当前自然周；创建默认文档由WorkspaceViewModel.CreateStudent协调，不保留旧NewStudentForm/NewStudentViewModel。更新保留文档字节并同步改备份文件名，检查指纹/重名/备份冲突；删除固定底部是/否确认，默认否，同时删JSON与bak。StudentFileStore先获取两个文件的操作句柄，删除主文件失败恢复备份原名；不声称断电时跨文件原子事务。窗口不复制存储与校验逻辑。
 
 ### 设置窗口
 
@@ -99,17 +101,17 @@ previous 按周一到周日排列，next 按周日到周六排列。顶部只显
 
 CanChangeMode由打开时原文档课程数决定：0时可改，有课程时只读；StudentFileStore在保存前再次检查磁盘旧文档课程数，不能同次删除并改模式绕过。先删除全部并保存后，可在重新打开的设置中再改。刷新图标先提交单元格再直接生成，不确认、不显示成功消息；异常通过底部提示，保留原表。“恢复默认课时”仍需确认，仅恢复timeGeneration和classPeriods，不清空课程或更改其它参数。
 
-设置PreviewMouseWheel统一转发SettingsPage外层ScrollViewer，覆盖表格、下拉和底部按钮；日历浮层排除并自行按月消费。时间下拉浮层将滚轮转发整页并收起，保持选值不变。无箭头模板不预留箭头空间，最多4项，每项28 DIP，滚动条统一11 DIP。日历只显示一个月，相邻月格内容隐藏且不可点击；翻月不改变所选日期。
+StudentWorkspaceWindow在设置页活动时处理PreviewMouseWheel，转给SettingsView统一滚动SettingsPage外层ScrollViewer，覆盖表格、下拉和底部按钮；日历浮层排除并自行按月消费。时间下拉浮层自行消费滚轮，保持展开及选值不变，不穿透外层页面；SettingsView处理页面滚轮前关闭所有时间浮层。无箭头模板不预留箭头空间，最多4项，每项28 DIP，滚动条统一11 DIP。日历只显示一个月，相邻月格内容隐藏且不可点击；翻月不改变所选日期。
 
 ### 课程与时段窗口
 
-课程编辑只维护一门课程的独立草稿，字段名称、颜色、备注，时段表列固定为上课周次/时间/上课地点/操作，双击真实空白新增、实际行编辑，末尾保留一行空白并使用窗口外层滚动。已有行提供明确编辑动作；删除课程仅编辑模式显示。
+课程编辑只维护一门课程的独立草稿，字段名称、只读颜色、提醒次数与间隔，时段表列固定为上课周次/时间/上课地点/提前提醒，双击真实空白新增、实际行编辑，不保留额外空白行，表头右侧＋新增；数据区最多5行并内部滚动。已有行双击编辑，时段窗口内保存、取消或删除，无表内操作按钮；删除课程仅编辑模式显示。
 
 时段编辑是课程编辑的 owned modal 子窗口，确定仅更新父窗口草稿；只有课程窗口保存成功才落盘。取消子窗口、取消课程窗口均不泄漏修改。
 
 周次仅接受ASCII数字、英文连字符/逗号/空格，WeekSelectionParser解析去重升序、格式化压缩区间。单/双周按绝对周次筛选。时间使用CourseTimeCode.EncodeTime/DecodeTime，单节401、双节30102；按学生模式检查配对。SchedulePresentation统一排序与展示，GroupedCourseTable使用Grid.RowSpan真正合并名称，表头固定、正文统一滚动，按课程ID选择与删除。
 
-课程颜色是文本框加预览；CourseColors在已有色相的最大圆周空档中部随机取色，使用固定柔和饱和度与明度，已有课程编辑不重新选色。无第三方UI依赖。
+课程颜色是名称输入框后的只读色块；CourseColors在已有色相的最大圆周空档中部随机取色，使用固定柔和饱和度与明度，已有课程编辑不重新选色。无第三方UI依赖。
 
 ## 6. 提示、确认与状态生命周期
 
@@ -123,7 +125,7 @@ CanChangeMode由打开时原文档课程数决定：0时可改，有课程时只
 
 ## 7. 职责与建议目录
 
-建议工程为 src/ClassTimetable（WPF）与 tests/ClassTimetable.Tests（规则和存储测试）。本机已确认安装 .NET SDK 10.0.400，建议目标 net10.0-windows；不在设计阶段安装依赖。
+建议工程为 src/ClassSchedule（WPF）与 tests/ClassSchedule.Tests（规则和存储测试）。本机已确认安装 .NET SDK 10.0.400，建议目标 net10.0-windows；不在设计阶段安装依赖。
 
 | 部分 | 职责 |
 |---|---|
@@ -151,7 +153,7 @@ ViewModel不持有具体Window、不查找控件、不直接解析JSON。View接
 
 ## 9. 视觉、部署与验证
 
-当前尺寸：主窗口600×600 DIP、屏幕居中；总体设置600×600、新增学生480×300、课程编辑540×550、管理课程600×500、时段320×340，独立子窗口均与直接owner居中。基础样式见[紧凑界面计划](compact-ui-plan.md)，后续交互以[课程分组修订](grouped-course-table-plan.md)及当前需求为准。课时预览只在总体设置出现，五列等宽、行及表头28 DIP，文字双向居中。
+当前尺寸：主窗口600×600 DIP、屏幕居中；总体设置600×600、课程管理520×540、时段320×390，独立子窗口均与直接owner居中。学生管理320×340 DIP独立开窗，课程编辑使用课程管理窗口切页。基础样式见[紧凑界面计划](compact-ui-plan.md)，后续交互以当前需求为准。课时预览只在总体设置出现，五列等宽、行及表头28 DIP，文字双向居中。
 
 浅色Windows 11风格、12–16 DIP圆角、低饱和色、可见焦点与中文字体回退。窗口可调整，弹窗按owner居中、限制在当前显示器工作区；小屏幕表单可滚动，底部按钮与提示可达。避免手绘整套窗口框架，先使用可靠系统窗口行为。
 
@@ -181,3 +183,15 @@ ViewModel不持有具体Window、不查找控件、不直接解析JSON。View接
 运行时缺失提示使用.NET原生apphost，在WPF启动前显示安装所需Windows Desktop Runtime的提示和下载入口，不额外引入启动器。该启动前提示不适用已启动窗口的底部消息栏规则。
 
 审查整理：ObservableObject.cs仅负责INotifyPropertyChanged基础能力；WorkspaceViewModel.cs独立负责学生选择、刷新和保存协调，不改变其公开接口。发布检查可运行tests/RuntimeChecks.ps1，验证不捆绑运行时及原生缺失提示。
+
+## 当前窗口实施结构
+
+StudentWorkspaceViewModel协调Courses/Course/Settings及Leave/Dates/Delete/ResetTimes确认状态；独立于控件。CourseViewModel、SettingsViewModel各自比较原始可编辑字段判断IsDirty，Build不修改课程草稿。StudentWorkspaceWindow负责共享底部提示、确认和焦点；CourseListView、CourseEditorView、SettingsView采用XAML结构，复用现有控件与业务规则。主题集中到Resources/Theme.xaml，隔离UI检查加载同一程序集资源，不触发生产Startup。旧CourseManagerWindow/CourseWindow/SettingsWindow/NewStudentWindow不再存在，ScheduleWindow独立保留。
+
+GeneralSettingsWindow和CourseManagementWindow是共享StudentWorkspaceWindow壳的两个独立入口，不增加导航框架，也不重复确认/保存逻辑。设置窗口只呈现SettingsView；课程窗口在CourseListView和CourseEditorView之间切页。SettingsView按内容宽度530 DIP断点并排/堆叠，基本标签92 DIP、参数标签70 DIP、单选项78 DIP、时间框43 DIP。CourseNameCell以8层半DIP圆角边缘过渡保持中心原色，课程选择叠加层仍不拦截命中；管理表前三列固定120/110/70 DIP。
+
+SingleInstance仅负责启动互斥量及窗口激活消息：已有实例时不创建主窗口，使用Win32窗口属性定位、转交前台权限并发送注册消息；原实例恢复主窗口并沿可见OwnedWindows链激活最深弹窗，不使用永久Topmost。
+
+当前提醒与保存关闭行为以[课程提醒修订](course-reminders-plan.md)为准：ReminderSession纯计算每次发生与轮次，ReminderService只跟踪当前StudentSnapshot，ReminderWindow显示可合并的短时通知；声音复用MySchedule波形，不引用其日历/托盘。数字提醒字段在CourseViewModel/ScheduleViewModel以字符串持有，以免空文本转换失败后静默保存旧数字。设置提交成功关闭、取消草稿关闭；原生禁用最大化但不设置最大尺寸。
+
+提醒时长通过CourseViewModel字符串草稿、ReminderSession的事件快照传入ReminderService，到期按该值关闭。schema2缺少该新增字段时默认1，不兼容其它旧字段/旧版本。空姓名列表通过鼠标/键盘输入拦截及DropDownOpened最后防线拒绝展开，提示仍使用原消息队列；显示文字内边距12 DIP=浮层4+选项8，实际到外框边缘为13 DIP。

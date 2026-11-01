@@ -1,4 +1,4 @@
-# 学生课程表实施计划
+# 课程表实施计划
 
 此文件保留首次实施记录；后续变化见[紧凑界面](compact-ui-plan.md)与[学生管理修订](student-management-plan.md)，当前规范位于requirements目录。
 
@@ -12,17 +12,17 @@
 
 ## 任务1：核心模型与规则
 
-文件：src/ClassTimetable.Core/{Models,Domain}、tests/ClassTimetable.Tests。
+文件：src/ClassSchedule.Core/{Models,Domain}、tests/ClassSchedule.Tests。
 
 接口：StudentDocument及Clone；WeekCalendar.Date/CurrentWeek/ChangeSunday；ClassTimeGenerator.Generate；WeekSelectionParser.Parse；TimetableValidator.Validate。
 
 - [x] 先编写日期边界、转换日期集合不变、周次解析、课时生成、冲突和模式校验断言，运行确认失败。
 - [x] 实现模型、严格校验及无WPF依赖的规则。
-- [x] dotnet run --project tests/ClassTimetable.Tests：所有断言通过。
+- [x] dotnet run --project tests/ClassSchedule.Tests：所有断言通过。
 
 ## 任务2：存储与通知状态
 
-文件：src/ClassTimetable.Core/Storage/StudentFileStore.cs、Presentation/NotificationQueue.cs。
+文件：src/ClassSchedule.Core/Storage/StudentFileStore.cs、Presentation/NotificationQueue.cs。
 
 接口：Load(name)返回文档+指纹；Scan返回有效学生及错误；Save(name, document, expectedFingerprint)返回新快照；NotificationQueue.Enqueue/Advance/Dispose。
 
@@ -32,7 +32,7 @@
 
 ## 任务3：应用与编辑流程
 
-文件：src/ClassTimetable/{ViewModels,Views}、App.xaml、主题资源。
+文件：src/ClassSchedule/{ViewModels,Views}、App.xaml、主题资源。
 
 接口：WorkspaceViewModel维护当前文档/指纹/周次；编辑VM持有草稿，只有Save成功才发布；视图管理owner、绑定、焦点和模态。
 

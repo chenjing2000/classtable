@@ -1,11 +1,11 @@
-param([string]$Executable = (Join-Path $PSScriptRoot '../dist/ClassTimetable.exe'))
+param([string]$Executable = (Join-Path $PSScriptRoot '../dist/ClassSchedule.exe'))
 $ErrorActionPreference = 'Stop'
 $temporaryRoot = [IO.Path]::GetFullPath([IO.Path]::GetTempPath())
-$checkDirectory = Join-Path $temporaryRoot ('ClassTimetable-runtime-' + [Guid]::NewGuid().ToString('N'))
+$checkDirectory = Join-Path $temporaryRoot ('ClassSchedule-runtime-' + [Guid]::NewGuid().ToString('N'))
 $process = $null
 try {
     New-Item -ItemType Directory -Path $checkDirectory | Out-Null
-    $copy = Join-Path $checkDirectory 'ClassTimetable.exe'
+    $copy = Join-Path $checkDirectory 'ClassSchedule.exe'
     Copy-Item -LiteralPath $Executable -Destination $copy
     $start = [Diagnostics.ProcessStartInfo]::new($copy)
     $start.UseShellExecute = $false

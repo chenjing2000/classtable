@@ -1,4 +1,0 @@
-<Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup><OutputType>WinExe</OutputType><TargetFramework>net10.0-windows</TargetFramework><UseWPF>true</UseWPF><SelfContained>false</SelfContained><AssemblyName>ClassTimetable</AssemblyName><ApplicationManifest>app.manifest</ApplicationManifest></PropertyGroup>
-  <ItemGroup><ProjectReference Include="../ClassTimetable.Core/ClassTimetable.Core.csproj" /></ItemGroup>
-</Project>

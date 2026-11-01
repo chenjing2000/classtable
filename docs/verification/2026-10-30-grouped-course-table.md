@@ -13,11 +13,11 @@
 
 ## 已执行
 
-- `dotnet build ClassTimetable.sln -m:1 --no-restore --nologo`：通过，0警告、0错误。受限环境无法读取Windows SDK目录，提升权限后成功。
+- `dotnet build ClassSchedule.sln -m:1 --no-restore --nologo`：通过，0警告、0错误。受限环境无法读取Windows SDK目录，提升权限后成功。
 - 核心测试：30组全部通过，包含编码/解码、周次ASCII规则、颜色空档、组内排序、草稿隔离、存储及已有功能。
 - WPF检查：70项全部通过，包含四列表头、名称跨3行、顺序、整组选中、真实行/空白事件分流、紧凑尺寸、颜色文本框、输入限制及11条时段下仍保留新增空白。
 - 通过computer-use skill在隔离测试数据上操作真实窗口：核对名称纵向合并、周次/时间/地点逐行、双击合并名进入整门编辑；双击时段表真实空白打开新增、双击已有时段打开编辑并保留原值；取消不保存；管理表已有选择时双击真实空白仍新建，并显示新生成的颜色文本及预览。
-- `./Publish.ps1 -Offline`：通过，更新dist/ClassTimetable.exe，使用缓存自包含单文件发布。未执行在线NuGet漏洞检查。
+- `./Publish.ps1 -Offline`：通过，更新dist/ClassSchedule.exe，使用缓存自包含单文件发布。未执行在线NuGet漏洞检查。
 - 发布前后dist/data全部文件路径及SHA-256完全一致，真实学生JSON和备份未修改。
 - 发布版EXE启动后实际显示主窗口；文档本地链接检查通过，隔离预览遗留的ui-check临时目录已清理。
 
