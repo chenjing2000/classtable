@@ -60,7 +60,7 @@ internal static class DurationAndSelectorChecks
             Check(duration.Text == "2", "Course editor shows persisted reminder duration");
             var durationRow = (StackPanel)duration.Parent;
             var unit = durationRow.Children.OfType<TextBlock>().Last();
-            Check(durationRow.Children.OfType<TextBlock>().Select(t => t.Text).SequenceEqual(new[] { "提醒次数", "间隔", "分钟，时长", "分钟" }) && unit.TranslatePoint(new Point(unit.ActualWidth, 0), durationRow).X <= durationRow.ActualWidth, "Duration and units fit the same reminder row");
+            Check(durationRow.Children.OfType<TextBlock>().Select(t => t.Text).SequenceEqual(new[] { "次，间隔", "分钟，时长", "分钟" }) && unit.TranslatePoint(new Point(unit.ActualWidth, 0), durationRow).X <= durationRow.ActualWidth, "Duration and units fit the same reminder row");
             var typing = new TextCompositionEventArgs(Keyboard.PrimaryDevice, new TextComposition(InputManager.Current, duration, "a")) { RoutedEvent = TextCompositionManager.PreviewTextInputEvent };
             duration.RaiseEvent(typing); Check(typing.Handled, "Duration rejects nonnumeric typing");
             duration.Text = "4"; Program.Descendants(editor).OfType<Button>().Single(b => b.Content as string == "保存").RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); Flush();

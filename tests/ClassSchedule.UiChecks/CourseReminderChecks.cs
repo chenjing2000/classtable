@@ -109,7 +109,7 @@ internal static class CourseReminderChecks
                         using var audible = new ReminderService(workspace, main, errors.Add, () => now, true); Flush();
                         var alert = audible.Alert!;
                         Check(alert.IsEnabled && editing.IsEnabled && alert.IsFlashing && alert.Topmost && errors.Count == 0, "Native sound and flashing start while course modal remains open");
-                        Click(alert, "关闭提醒");
+                        Click(alert, "OK");
                         Check(audible.Alert is null && !alert.IsFlashing && !alert.Topmost && ReminderSound.Stop(), "Native close stops sound and flashing without closing editor");
                     }
                     finally { editing.Close(); }

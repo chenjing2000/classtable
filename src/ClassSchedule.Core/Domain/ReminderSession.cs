@@ -3,8 +3,8 @@ namespace ClassSchedule.Core;
 public sealed record ReminderNotice(string StudentName, Guid CourseId, Guid ScheduleId, string CourseName,
     string Location, DateTime ClassStart, DateTime StartedAt, int Number, int Total, int DurationMinutes);
 
-// A session owns the progress for one selected student. Dismissing a visible alert
-// does not alter this schedule; only switching students or editing a plan does.
+// A session owns progress and extra repetitions for one selected student.
+// Dismissing an alert leaves the remaining schedule intact; extras are never persisted.
 public sealed class ReminderSession
 {
     private sealed class Pending(string student, Course course, ScheduleEntry slot, DateTime start, DateTime first)
@@ -15,6 +15,7 @@ public sealed class ReminderSession
         public DateTime Start = start;
         public DateTime Next = first;
         public int Fired;
+        public int Extra;
         public readonly (int Count, int Interval, int Lead) Timing = (course.ReminderCount, course.ReminderIntervalMinutes, slot.ReminderMinutes);
     }
     private readonly Dictionary<(Guid Course, Guid Slot, DateTime Start), Pending> pending = [];
@@ -49,12 +50,18 @@ public sealed class ReminderSession
         var result = new List<ReminderNotice>();
         foreach (var item in pending.Values.OrderBy(p => p.Next))
         {
-            if (item.Fired >= item.Timing.Count || item.Next > now) continue;
+            if (item.Fired >= item.Timing.Count + item.Extra || item.Next > now) continue;
             item.Fired++;
-            result.Add(new(item.Student, item.Course.Id, item.Slot.Id, item.Course.Name, item.Slot.Location, item.Start, now, item.Fired, item.Timing.Count, item.Course.ReminderDurationMinutes));
+            result.Add(new(item.Student, item.Course.Id, item.Slot.Id, item.Course.Name, item.Slot.Location, item.Start, now, item.Fired, item.Timing.Count + item.Extra, item.Course.ReminderDurationMinutes));
             var interval = TimeSpan.FromMinutes(item.Timing.Interval).Ticks;
             item.Next = new DateTime(Math.Min(DateTime.MaxValue.Ticks, now.Ticks + interval));
         }
         return result;
+    }
+    public bool AddReminder(ReminderNotice notice)
+    {
+        if (notice.StudentName != student || !pending.TryGetValue((notice.CourseId, notice.ScheduleId, notice.ClassStart), out var item)) return false;
+        item.Extra++;
+        return true;
     }
 }

@@ -20,13 +20,26 @@ ClassSchedule，使用Bee图标的Windows WPF桌面程序：每名学生独立�
 
 **数据已破坏性升级为schemaVersion 2，旧格式及note字段不兼容；原JSON和备份不会自动删除，需要保留原文件后重新创建。**
 
-提醒仅针对当前学生；未来课程的首次提醒若已过点，加载或切换时立即启动完整一轮。每次默认1分钟，时长可设且不能超过间隔，关闭当次仍按间隔继续；程序退出停止提醒。声音和闪烁参考MySchedule。所有窗口不限制最大尺寸，禁用最大化按钮，仍可边缘缩放。
+提醒仅针对当前学生；未来课程的首次提醒若已过点，加载或切换时立即启动完整一轮。到时先恢复主窗口，再显示相对主窗口居中且置顶的“上课提醒”。标题18 DIP加粗红色，正文及按钮16 DIP；时间、课程名及可空的@上课地点、出发提示、次数均居中，OK/Later等宽72 DIP、整组居中、间隙8 DIP。每次默认1分钟，时长可设且不能超过间隔；OK、叉号或自动到期只关闭当前次，Later额外增加本次课的一次总提醒，不改变其他周次和课程JSON。间隔仍从提醒开始计算，程序退出停止提醒。声音参考MySchedule，背景柔和闪烁不改变文字指定颜色。所有窗口不限制最大尺寸，禁用最大化按钮，仍可边缘缩放。
 
 数据位于正在运行的EXE旁 `data/姓名.json`，更新保留上一份 `姓名.bak`。请把程序放到可写目录。文件出错或被外部修改时程序拒绝覆盖；备份恢复须先关闭程序并手动备份原文件。不要同时用外部编辑器写入文件。
 
 ## 开发和验证
 
-需要.NET 10 SDK和Windows：
+需要Windows 10/11与.NET 10 SDK（仅安装运行时不能编译）。构建入口与MySchedule一致，支持Windows自带PowerShell 5.1，无需另外安装PowerShell 7。
+
+拉取仓库后，双击根目录 `build-release.bat` 发布，再双击 `run.bat` 启动；命令行同样可用：
+
+```powershell
+.\build-release.bat
+.\run.bat
+```
+
+最终入口固定为 `dist\ClassSchedule.exe`，沿用现有位置及其旁边的学生data和程序设置。`run.bat`不编译；未发布时会提示先运行构建脚本。发布前须通过托盘“退出”关闭程序，叉号只隐藏窗口。
+
+普通开发构建默认 `UseAppHost=false`，生成主程序DLL；发布脚本显式启用apphost并先生成到 `obj/portable-publish`，确认只有一个EXE后复制到dist，清除SDK临时apphost及过期应用DLL/deps/runtimeconfig，不清理data、备份和设置。仍是Windows x64框架依赖单文件，不集成.NET。
+
+开发构建、运行及定向验证：
 
 ```powershell
 dotnet build src/ClassSchedule/ClassSchedule.csproj
@@ -38,7 +51,7 @@ dotnet run --project src/ClassSchedule/ClassSchedule.csproj
 ./tests/RuntimeChecks.ps1
 ```
 
-测试为无第三方测试框架依赖的可执行断言程序，失败时返回非零退出码。RuntimeChecks检查已发布EXE的缺失.NET提示，使用临时副本及子进程环境，不修改本机运行时或真实学生数据。断网且已缓存所需运行时包时可用 `./Publish.ps1 -Offline`；该选项明确跳过在线NuGet漏洞检查。
+测试为无第三方测试框架依赖的可执行断言程序，失败时返回非零退出码。RuntimeChecks检查已发布EXE的缺失.NET提示，使用临时副本及子进程环境，不修改本机运行时或真实学生数据。首次还原/发布可能需要联网下载SDK所需包；断网且已缓存所需包时可用 `./Publish.ps1 -Offline` 或 `build-release.bat -Offline`，该选项明确跳过在线NuGet漏洞检查。直接执行dotnet publish时如需EXE，必须显式传入 `-p:UseAppHost=true`，推荐使用统一构建入口。
 
 日常修改按影响范围验证，不默认运行全部检查。底部确认和课程时段操作的针对性检查：`dotnet tests/ClassSchedule.UiChecks/bin/Debug/net10.0-windows/ClassSchedule.UiChecks.dll --confirmations`；需要完整回归时再运行无参数检查。
 
@@ -64,8 +77,14 @@ dotnet run --project src/ClassSchedule/ClassSchedule.csproj
 
 普通按钮按下效果、菜单及弹窗返回状态的定向检查：界面测试加`--button-feedback`。
 
+提醒弹窗样式、主窗口恢复及事件级追加轮次的定向检查：界面测试加`--reminder-popup`。
+
 ## 待提交日志约定
 
 每轮修改完成后，在根目录 [CHANGELOG_PENDING.md](CHANGELOG_PENDING.md) 追加主要改动、针对性验证结果及未验证范围。用户要求提交GitHub时，先读该日志，再核对实际Git diff与工作区状态，整理提交说明；日志不能代替代码核对或新鲜验证。
 
 提交时仅清空本次纳入提交的日志条目，与代码一同提交；直到推送成功且确认本地提交与远程分支一致，才算该批日志处理完成。提交或推送失败时保留或恢复待提交条目，不得遗失记录。未提交的新修改继续保留，下一轮再追加。用户未要求提交时只更新日志，不自动推送；用户数据、发布文件和构建输出不提交。
+
+提醒窗口字号、英文按钮及紧凑布局的最小定向检查：界面测试加`--reminder-popup-layout`，不执行轮次或其他界面检查。
+
+学生管理操作后扫描错误的定向检查：界面测试加`--student-scan-errors`。其他学生文件损坏或不可读时，错误在学生管理底部显示；正常学生的成功操作保持，损坏文件不覆盖。

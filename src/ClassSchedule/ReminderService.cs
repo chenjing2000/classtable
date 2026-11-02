@@ -15,15 +15,22 @@ internal sealed class ReminderService : IDisposable
     private readonly Action<string> report;
     private readonly Func<DateTime> clock;
     private readonly bool effects;
+    private readonly Action restoreMain;
     private readonly ReminderSession session = new();
     private readonly DispatcherTimer timer = new() { Interval = TimeSpan.FromSeconds(1) };
-    private readonly List<ReminderNotice> active = [];
+    private readonly Dictionary<(Guid Course, Guid Slot, DateTime Start), (ReminderNotice Notice, ReminderWindow Window)> active = [];
     private StudentSnapshot? previous;
-    internal ReminderWindow? Alert { get; private set; }
+    internal ReminderWindow? Alert => active.Values.Select(a => a.Window).FirstOrDefault();
 
-    public ReminderService(WorkspaceViewModel workspace, Window main, Action<string> report, Func<DateTime>? clock = null, bool effects = true)
+    public ReminderService(WorkspaceViewModel workspace, Window main, Action<string> report, Func<DateTime>? clock = null, bool effects = true, Action? restoreMain = null)
     {
         this.workspace = workspace; this.main = main; this.report = report; this.clock = clock ?? (() => DateTime.Now); this.effects = effects;
+        this.restoreMain = restoreMain ?? (() =>
+        {
+            main.ShowInTaskbar = true;
+            if (main.WindowState == WindowState.Minimized) main.WindowState = WindowState.Normal;
+            main.Show(); if (effects) main.Activate();
+        });
         workspace.PropertyChanged += WorkspaceChanged;
         timer.Tick += Tick; timer.Start(); Synchronize();
     }
@@ -38,27 +45,42 @@ internal sealed class ReminderService : IDisposable
     private void Tick(object? sender, EventArgs e) => Advance(clock());
     internal void Advance(DateTime now)
     {
-        active.RemoveAll(n => now - n.StartedAt >= TimeSpan.FromMinutes(n.DurationMinutes));
-        active.AddRange(session.Tick(now));
-        if (active.Count == 0) { if (Alert is not null) Dismiss(); return; }
-        if (Alert is null)
+        foreach (var item in active.Values.Where(a => now - a.Notice.StartedAt >= TimeSpan.FromMinutes(a.Notice.DurationMinutes)).ToArray())
+            CloseAlert(Key(item.Notice), item.Window);
+        var notices = session.Tick(now);
+        if (notices.Count == 0) return;
+        var startSound = active.Count == 0;
+        restoreMain();
+        foreach (var notice in notices)
         {
-            var alert = new ReminderWindow(main, effects); Alert = alert;
-            alert.Closed += (_, _) => { if (ReferenceEquals(Alert, alert)) Dismiss(); };
-            alert.Display(active);
-            if (main.WindowState == WindowState.Minimized) main.WindowState = WindowState.Normal;
+            var key = Key(notice);
+            ReminderWindow? alert = null;
+            alert = new ReminderWindow(main, effects, () =>
+            {
+                if (!active.TryGetValue(key, out var current) || !ReferenceEquals(current.Window, alert)) return;
+                session.AddReminder(current.Notice); CloseAlert(key, alert);
+            });
+            active.Add(key, (notice, alert));
+            alert.Closed += (_, _) => CloseAlert(key, alert);
+            alert.Display(notice);
             alert.Show(); if (effects) alert.Activate();
-            if (effects)
-                try { ReminderSound.Start(); }
-                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException) { report("提醒声音播放失败：" + ex.Message); }
         }
-        else Alert.Display(active);
+        if (effects && startSound)
+            try { ReminderSound.Start(); }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException) { report("提醒声音播放失败：" + ex.Message); }
+    }
+    private static (Guid Course, Guid Slot, DateTime Start) Key(ReminderNotice notice) => (notice.CourseId, notice.ScheduleId, notice.ClassStart);
+    private void CloseAlert((Guid Course, Guid Slot, DateTime Start) key, ReminderWindow window)
+    {
+        if (!active.TryGetValue(key, out var item) || !ReferenceEquals(item.Window, window)) return;
+        active.Remove(key); window.Close();
+        if (effects && active.Count == 0) ReminderSound.Stop();
     }
     internal void Dismiss()
     {
-        var alert = Alert; Alert = null; active.Clear();
+        var windows = active.Values.Select(a => a.Window).ToArray(); active.Clear();
         if (effects) ReminderSound.Stop();
-        alert?.Close();
+        foreach (var window in windows) window.Close();
     }
     public void Dispose()
     {

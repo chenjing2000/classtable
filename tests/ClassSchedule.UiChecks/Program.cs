@@ -23,6 +23,9 @@ internal static class Program
         // Load the real theme without running production startup or opening user data.
         var app = new Application { ShutdownMode = ShutdownMode.OnExplicitShutdown };
         app.Resources = new ResourceDictionary { Source = new Uri("pack://application:,,,/ClassSchedule;component/Resources/Theme.xaml") };
+        if (args.Contains("--student-scan-errors")) return StudentScanErrorChecks.Run(app);
+        if (args.Contains("--reminder-popup-layout")) return ReminderPopupChecks.Run(app, true);
+        if (args.Contains("--reminder-popup")) return ReminderPopupChecks.Run(app);
         if (args.Contains("--tray-startup")) return TrayStartupChecks.Run(app, args.Contains("--tray-smoke"));
         if (args.Contains("--button-feedback")) return ButtonFeedbackChecks.Run(app);
         if (args.Contains("--layout-stability")) return LayoutStabilityChecks.Run(app);

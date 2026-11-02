@@ -35,7 +35,7 @@ public partial class App : Application
         window.Dispatcher.BeginInvoke(() =>
         {
             if (Dispatcher.HasShutdownStarted) return;
-            reminders = new ReminderService(workspace, window, window.Messages.Enqueue);
+            reminders = new ReminderService(workspace, window, window.Messages.Enqueue, restoreMain: tray.Restore);
             window.RefreshStudents();
             if (!loaded) window.Messages.Enqueue("开机启动设置失败：" + settings.LastError);
         }, System.Windows.Threading.DispatcherPriority.ContextIdle);

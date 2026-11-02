@@ -42,23 +42,25 @@ public sealed class WorkspaceViewModel(StudentFileStore store) : ObservableObjec
         Current = store.Save(old.Name, candidate, old.Fingerprint);
         Week = Math.Clamp(Week, 1, candidate.Settings.TotalWeeks); Changed(null);
     }
-    public void Create(string name, StudentDocument candidate)
+    public List<string> Create(string name, StudentDocument candidate)
     {
-        Current = store.Save(name, candidate, null); Names = store.Scan().Students.Select(s => s.Name).ToList(); GoToday(); Changed(null);
+        Current = store.Save(name, candidate, null);
+        var scan = store.Scan(); Names = scan.Students.Select(s => s.Name).ToList(); GoToday(); Changed(null);
+        return scan.Errors;
     }
-    public void CreateStudent(string name, DateOnly today)
+    public List<string> CreateStudent(string name, DateOnly today)
         => Create(name, StudentDocument.Create(today.AddDays(-(((int)today.DayOfWeek + 6) % 7))));
     public StudentSnapshot LoadStudent(string name) => store.Load(name);
-    public void RenameStudent(StudentSnapshot student, string name)
+    public List<string> RenameStudent(StudentSnapshot student, string name)
     {
         var renamed = store.Rename(student, name);
         if (Current?.Name == student.Name) Current = renamed;
-        Refresh();
+        return Refresh();
     }
-    public void DeleteStudent(StudentSnapshot student)
+    public List<string> DeleteStudent(StudentSnapshot student)
     {
         store.Delete(student);
         if (Current?.Name == student.Name) Current = null;
-        Refresh();
+        return Refresh();
     }
 }

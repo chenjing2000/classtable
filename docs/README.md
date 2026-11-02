@@ -1,16 +1,8 @@
 # 课程表文档
 
-第一版范围：Windows WPF + 简单 MVVM，学生单学期、每日8/10节、每人统一单节或双节。当前主窗口600 DIP、课程管理520 DIP，设置与课程独立管理，独立学生管理支持新增/改名/删除和四列分组表。运行见[项目说明](../README.md)，最新结果见[五行时段表验证](verification/2026-11-01-compact-slots.md)，此前见[提醒时长与姓名框验证](verification/2026-11-01-duration-selector.md)，此前见[课程提醒与schema2验证](verification/2026-11-01-course-reminders.md)，此前见[单实例与界面修订验证](verification/2026-11-01-activation-and-student-list.md)，此前见[学生管理与改名验证](verification/2026-11-01-student-management-rename.md)，此前见[设置菜单与分窗验证](verification/2026-11-01-compact-settings-menu.md)，历史结果见[三类窗口验证](verification/2026-10-30-three-windows.md)、[代码审查记录](verification/2026-10-30-code-review.md)、[运行时发布验证](verification/2026-10-30-framework-dependent.md)、[内容高度验证](verification/2026-10-30-content-fit.md)、[统一UI验证](verification/2026-10-30-unified-ui.md)、[课程分组验证](verification/2026-10-30-grouped-course-table.md)、[学生管理验证](verification/2026-10-29-student-management.md)、[紧凑界面验证](verification/2026-10-29-compact-ui.md)和[初版验证](verification/2026-10-29.md)。
-
-当前调整见[设置菜单与分窗方案](design/compact-settings-menu-plan.md)，此前的[简洁主界面方案](design/simplified-workspace-plan.md)保留作为演进记录。未穷举的视觉验证范围在方案与验证记录中明确列出。
+范围为Windows WPF与简单MVVM、学生单学期、每日8/10节、每人统一单节或双节。当前操作与构建入口见[项目说明](../README.md)；待提交内容见[待提交日志](../CHANGELOG_PENDING.md)。历史验证记录反映各自当时版本，当前规则以requirements与用户最新决定为准。
 
 ## 阅读顺序
-
-最新定向验证见[主窗口稳定性与课程编辑布局](verification/2026-11-02-layout-stability.md)；待提交修改汇总见根目录[待提交日志](../CHANGELOG_PENDING.md)，提交工作约定见[项目说明](../README.md#待提交日志约定)。
-
-按钮按下及键盘焦点效果见[普通按钮反馈验证](verification/2026-11-02-button-feedback.md)。
-
-托盘、开机启动及退出确认见[实施方案](design/tray-startup-plan.md)及[110项定向检查与全面审查记录](verification/2026-11-02-tray-startup.md)。
 
 1. [产品与交互需求](requirements/requirements.md)：已确认的功能范围与界面规则。
 2. [数据格式](requirements/data-model.md)：JSON字段、完整示例和保存约束。
@@ -18,6 +10,20 @@
 4. [程序设计方案](design/program-design.md)：职责划分、状态流程、存储及验证设计；末节列出实现采用的默认选择。
 5. [UI参考说明](ui/README.md)：四张概念图及其局限。
 6. [项目代码审查 skill](skills/project-code-review/SKILL.md)：实现与审查时的质量准则。
+
+## 按主题查阅验证记录
+
+| 主题 | 记录 |
+|---|---|
+| 代码审查与学生扫描错误整改 | [本批审查](verification/2026-11-02-review-cleanup.md) |
+| 跨电脑构建与Windows PowerShell 5.1 | [构建方式对齐](verification/2026-11-02-build-parity.md) |
+| 提醒样式、OK/Later及事件级追加次数 | [提醒弹窗](verification/2026-11-02-reminder-popup.md) |
+| 托盘、自动启动及退出保存确认 | [托盘启动](verification/2026-11-02-tray-startup.md) |
+| 主课表稳定性与课程编辑布局 | [布局稳定](verification/2026-11-02-layout-stability.md) |
+| 鼠标按下与键盘焦点 | [按钮反馈](verification/2026-11-02-button-feedback.md) |
+| 五行时段表及更早实现 | [紧凑时段表](verification/2026-11-01-compact-slots.md)、[历史验证目录](verification/) |
+
+计划与演进记录保留在design，实际验证范围及未验证项见各记录；提交工作约定见[项目说明](../README.md#待提交日志约定)。
 
 ## 规范优先级
 

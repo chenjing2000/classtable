@@ -52,6 +52,13 @@ internal static class ReminderChecks
             var concurrent = Document(); concurrent.Courses.Add(new Course { Name = "英语", Schedules = [new ScheduleEntry { Weeks = [1], DayOfWeek = 1, StartPeriod = 2, ReminderMinutes = 85 }] }); TimetableValidator.Validate(concurrent);
             session = new(); session.Synchronize("甲", concurrent, start.AddMinutes(-40));
             Check(session.Tick(start.AddMinutes(-30)).Count == 2, "Simultaneous reminders for distinct class starts all fire");
+            session = new(); d = Document(); session.Synchronize("甲", d, start.AddMinutes(-31));
+            var extraNotice = session.Tick(start.AddMinutes(-30)).Single();
+            Check(session.AddReminder(extraNotice), "Extra reminder is attached to a pending occurrence");
+            session.Synchronize("甲", d.Clone(), start.AddMinutes(-29));
+            Check(session.Tick(start.AddMinutes(-27)).Single().Total == 4 && d.Courses[0].ReminderCount == 3, "Same-plan save preserves runtime extra count without changing document");
+            session.Synchronize("乙", null, start.AddMinutes(-26));
+            Check(!session.AddReminder(extraNotice), "Stale reminder cannot extend another student session");
             Console.WriteLine($"REMINDER CHECKS PASSED: {count}"); return 0;
         }
         catch (Exception ex) { Console.Error.WriteLine(ex); return 1; }

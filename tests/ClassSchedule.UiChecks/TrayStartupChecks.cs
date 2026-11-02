@@ -97,7 +97,7 @@ internal static class TrayStartupChecks
             using (var reminders = new ReminderService(workspace, main, main.Messages.Enqueue, () => clock, false))
             {
                 tray.Hide(); clock = clock.AddMinutes(1); reminders.Advance(clock); Flush();
-                Check(!main.IsVisible && reminders.Alert is { IsVisible: true }, "New reminder is visible while main stays in tray");
+                Check(main.IsVisible && reminders.Alert is { IsVisible: true }, "New reminder restores main and shows alert");
                 tray.Restore(); tray.Hide(); clock = clock.AddMinutes(1); reminders.Advance(clock); Flush();
                 tray.Restore(); Flush();
                 Check(reminders.Alert is null && !app.Windows.OfType<ReminderWindow>().Any(), "Restore does not resurrect expired hidden reminder");
