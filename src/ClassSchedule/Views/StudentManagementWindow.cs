@@ -50,7 +50,8 @@ public sealed class StudentManagementWindow : DialogWindow
         };
         Closing += (_, e) =>
         {
-            if (allowClose) return;
+            if (allowClose || ExitApproved) return;
+            if (ApplicationExitPending) { e.Cancel = true; return; }
             if (confirming) { e.Cancel = true; CancelConfirmation(); return; }
             if (!Model.IsDirty) return;
             e.Cancel = true; SetFrozen(true);
@@ -59,6 +60,13 @@ public sealed class StudentManagementWindow : DialogWindow
         Render();
     }
     private void Execute(Action action) { Attempt(action); Render(); }
+    protected override bool HasExitChanges => Model.IsDirty;
+    protected override void PrepareApplicationExit() { SetFrozen(false); students.IsEnabled = false; }
+    protected override void SaveApplicationExit(Action saved)
+    {
+        if (Model.Selected is null) Model.Create(); else Model.Update();
+        saved();
+    }
     private void Render()
     {
         rendering = true; students.ItemsSource = Model.Names; students.SelectedItem = Model.Selected?.Name; rendering = false;

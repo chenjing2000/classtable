@@ -19,6 +19,9 @@ public class DialogWindow : Window
     protected readonly StackPanel Footer = new() { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right };
     protected bool Dirty;
     private bool allowClose;
+    private Action? exitCompleted;
+    internal bool ApplicationExitPending { get; private set; }
+    protected bool ExitApproved { get; private set; }
     public NotificationQueue Messages { get; } = new();
     public DialogWindow(string title, double width, double height, bool editor = true)
     {
@@ -51,6 +54,11 @@ public class DialogWindow : Window
             }
         };
         Closing += OnClosing;
+        PreviewKeyDown += (_, args) =>
+        {
+            if (ApplicationExitPending && args.Key == System.Windows.Input.Key.Escape)
+            { ShowExitConfirmation(); args.Handled = true; }
+        };
         KeyDown += (_, args) =>
         {
             if (!editor || args.Handled || args.Key != System.Windows.Input.Key.Escape) return;
@@ -85,8 +93,29 @@ public class DialogWindow : Window
     }
     protected void Accept() { allowClose = true; DialogResult = true; }
     protected void DiscardAndClose() { allowClose = true; Close(); }
+    protected virtual bool HasExitChanges => Dirty;
+    protected virtual void PrepareApplicationExit() { }
+    protected virtual void SaveApplicationExit(Action saved) => saved();
+    internal void RequestApplicationExit(Action completed)
+    {
+        if (ApplicationExitPending) return;
+        PrepareApplicationExit(); exitCompleted = completed;
+        if (!HasExitChanges) { FinishApplicationExit(); return; }
+        ApplicationExitPending = true; Footer.IsEnabled = false; ShowExitConfirmation();
+    }
+    protected void ShowExitConfirmation() => SetConfirmation("是否保存修改？",
+        ("是", () => { if (!Attempt(() => SaveApplicationExit(FinishApplicationExit))) ShowExitConfirmation(); }),
+        ("否", FinishApplicationExit));
+    private void FinishApplicationExit()
+    {
+        ExitApproved = allowClose = true; ApplicationExitPending = false;
+        var next = exitCompleted; exitCompleted = null;
+        Close();
+        if (next is not null) Dispatcher.BeginInvoke(next, DispatcherPriority.Background);
+    }
     private void OnClosing(object? sender, CancelEventArgs e)
     {
+        if (ApplicationExitPending) { e.Cancel = true; ShowExitConfirmation(); return; }
         if (!Dirty || allowClose) return;
         e.Cancel = true; Confirm("有未保存的修改，是否放弃？", () => { allowClose = true; Close(); }, "放弃修改");
     }

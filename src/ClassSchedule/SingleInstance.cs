@@ -11,6 +11,7 @@ internal sealed class SingleInstance : IDisposable
     private readonly uint message;
     private HwndSource? source;
     private Window? main;
+    private Action? restore;
     public bool IsPrimary { get; }
 
     public SingleInstance(string key = "ClassSchedule.Desktop.v1")
@@ -21,9 +22,9 @@ internal sealed class SingleInstance : IDisposable
         catch (AbandonedMutexException) { IsPrimary = true; }
     }
 
-    public void Attach(Window window)
+    public void Attach(Window window, Action? restore = null)
     {
-        main = window;
+        main = window; this.restore = restore;
         var handle = new WindowInteropHelper(window).EnsureHandle();
         source = HwndSource.FromHwnd(handle); source.AddHook(Receive);
         SetProp(handle, key, new IntPtr(1));
@@ -55,6 +56,8 @@ internal sealed class SingleInstance : IDisposable
     private IntPtr Receive(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
     {
         if ((uint)msg != message || main is null) return IntPtr.Zero;
+        if (restore is not null) { restore(); handled = true; return IntPtr.Zero; }
+        main.Show();
         if (main.WindowState == WindowState.Minimized) main.WindowState = WindowState.Normal;
         var target = main;
         while (target.OwnedWindows.Cast<Window>().LastOrDefault(w => w.IsVisible) is { } child) target = child;

@@ -15,6 +15,8 @@ public sealed class MainWindow : DialogWindow
     private readonly TextBlock status = Ui.Text("");
     private readonly Grid table = new();
     private readonly Button more = Ui.Button("", () => { }, "设置");
+    private readonly MenuItem startupItem = new() { Header = "开机启动", IsCheckable = true, IsChecked = true };
+    private StartupSettings? startup;
     private bool rendering;
     private (string? Name, string? Fingerprint, int Week)? renderedTable;
     private DateTime lastWheel;
@@ -55,12 +57,20 @@ public sealed class MainWindow : DialogWindow
             Attempt(() => vm.Select(name)); Render();
         };
         var menu = new ContextMenu();
+        var separatorStyle = (Style)FindResource(typeof(Separator));
+        menu.Items.Add(startupItem); menu.Items.Add(new Separator { Style = separatorStyle });
+        startupItem.Click += (_, _) =>
+        {
+            if (startup is null) return;
+            if (!startup.SetStartWithWindows(startupItem.IsChecked)) Messages.Enqueue("开机启动设置失败：" + startup.LastError);
+            startupItem.IsChecked = startup.StartWithWindows;
+        };
         MenuItem Item(string text, Action action)
         {
             var item = new MenuItem { Header = text }; item.Click += (_, _) => action(); menu.Items.Add(item); return item;
         }
         var settingsItem = Item("总体设置", Settings); var manageItem = Item("课程管理", ManageCourses);
-        menu.Items.Add(new Separator()); Item("学生管理", ManageStudents); Item("更新学生信息", RefreshStudents);
+        menu.Items.Add(new Separator { Style = separatorStyle }); Item("学生管理", ManageStudents); Item("更新学生信息", RefreshStudents);
         more.ContextMenu = menu;
         more.Click += (_, _) => { manageItem.IsEnabled = settingsItem.IsEnabled = vm.Current is not null; menu.PlacementTarget = more; menu.Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom; menu.IsOpen = true; };
         var toolbar = new Grid { Margin = new Thickness(0, 0, 0, 6) };
@@ -81,6 +91,7 @@ public sealed class MainWindow : DialogWindow
         };
         body.Children.Add(board); Body(body, false); Render();
     }
+    internal void ConfigureStartup(StartupSettings settings) { startup = settings; startupItem.IsChecked = settings.StartWithWindows; }
     public void RefreshStudents()
     {
         Attempt(() => { foreach (var error in vm.Refresh()) Messages.Enqueue(error); }); Render();
@@ -89,7 +100,7 @@ public sealed class MainWindow : DialogWindow
     private void ManageStudents()
     {
         var dialog = new StudentManagementWindow(vm) { Owner = this };
-        dialog.ShowDialog(); Render(); more.Focus();
+        dialog.ShowDialog(); Render();
     }
     private void OpenWorkspace(WorkspacePage page, Guid? id = null, int? day = null, int period = 1)
     {

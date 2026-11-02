@@ -26,7 +26,8 @@ public partial class StudentWorkspaceWindow : DialogWindow
         State.CloseRequested += CloseRequested;
         Closing += (_, e) =>
         {
-            if (allowClose) return;
+            if (allowClose || ExitApproved) return;
+            if (ApplicationExitPending) { e.Cancel = true; return; }
             CommitCells();
             if (State.Confirmation != WorkspaceConfirmation.None) { e.Cancel = true; State.CancelConfirmation(); }
             else if (State.IsDirty) { e.Cancel = true; Run(State.RequestClose); }
@@ -42,6 +43,19 @@ public partial class StudentWorkspaceWindow : DialogWindow
         Render();
     }
     private void CloseRequested() { allowClose = true; Close(); }
+    protected override bool HasExitChanges => State.IsDirty;
+    protected override void PrepareApplicationExit()
+    {
+        CommitCells(); State.CancelConfirmation(); PageHeading.IsEnabled = false;
+    }
+    protected override void SaveApplicationExit(Action saved)
+    {
+        CommitCells();
+        void Save() { if (Attempt(State.SaveForExit)) saved(); else ShowExitConfirmation(); }
+        if (State.Settings?.ChangesDates == true)
+            SetConfirmation("修改学期起点会改变所有课程的实际日期。是否保存？", ("保存新日期", Save), ("继续编辑", ShowExitConfirmation));
+        else Save();
+    }
     private void PageStateChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e) => Render();
     private void CommitCells() { if (PageContent.Content is SettingsView view) view.CommitCells(); }
     private void Run(Action action) { CommitCells(); Attempt(action); }

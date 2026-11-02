@@ -8,6 +8,10 @@
 
 最新定向验证见[主窗口稳定性与课程编辑布局](verification/2026-11-02-layout-stability.md)；待提交修改汇总见根目录[待提交日志](../CHANGELOG_PENDING.md)，提交工作约定见[项目说明](../README.md#待提交日志约定)。
 
+按钮按下及键盘焦点效果见[普通按钮反馈验证](verification/2026-11-02-button-feedback.md)。
+
+托盘、开机启动及退出确认见[实施方案](design/tray-startup-plan.md)及[110项定向检查与全面审查记录](verification/2026-11-02-tray-startup.md)。
+
 1. [产品与交互需求](requirements/requirements.md)：已确认的功能范围与界面规则。
 2. [数据格式](requirements/data-model.md)：JSON字段、完整示例和保存约束。
 3. [验收清单](requirements/acceptance.md)：实现后应逐项验证的行为。

@@ -1,4 +1,4 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup><OutputType>WinExe</OutputType><TargetFramework>net10.0-windows</TargetFramework><UseWPF>true</UseWPF><SelfContained>false</SelfContained><AssemblyName>ClassSchedule</AssemblyName><ApplicationIcon>../../Bee.ico</ApplicationIcon><ApplicationManifest>app.manifest</ApplicationManifest></PropertyGroup>
+  <PropertyGroup><OutputType>WinExe</OutputType><TargetFramework>net10.0-windows</TargetFramework><UseWPF>true</UseWPF><UseWindowsForms>true</UseWindowsForms><SelfContained>false</SelfContained><AssemblyName>ClassSchedule</AssemblyName><ApplicationIcon>../../Bee.ico</ApplicationIcon><ApplicationManifest>app.manifest</ApplicationManifest></PropertyGroup>
   <ItemGroup><ProjectReference Include="../ClassSchedule.Core/ClassSchedule.Core.csproj" /></ItemGroup>
-<ItemGroup><Resource Include="Resources/Bee.png" /></ItemGroup></Project>
+<ItemGroup><Resource Include="Resources/Bee.png" /><Resource Include="../../Bee.ico" Link="Resources/Bee.ico" /><Using Remove="System.Windows.Forms"/><Using Remove="System.Drawing"/></ItemGroup></Project>

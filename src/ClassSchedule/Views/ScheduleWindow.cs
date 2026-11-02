@@ -11,8 +11,10 @@ namespace ClassSchedule.Views;
 
 public sealed class ScheduleWindow : DialogWindow
 {
+    private readonly Action saveForExit;
     public ScheduleWindow(ScheduleViewModel vm, Action<ScheduleEntry> accept, Action? deleted = null) : base(vm.IsNew ? "新增上课时段" : "编辑上课时段", 320, 390)
     {
+        saveForExit = () => accept(vm.Build());
         DataContext = vm;
         MinWidth = 300;
         var weeks = Ui.RestrictedInput(nameof(vm.Weeks), WeekSelectionParser.IsInputText, "周次只接受数字、英文连字符、英文逗号和空格。", Messages.Enqueue);
@@ -35,4 +37,5 @@ public sealed class ScheduleWindow : DialogWindow
         actions.Children.Add(Ui.Button("取消", DiscardAndClose));
         var acceptButton = Ui.Button("保存", () => { if (Attempt(() => accept(vm.Build()))) Accept(); }); acceptButton.IsDefault = true; actions.Children.Add(acceptButton); Footer.Children.Add(bar);
     }
+    protected override void SaveApplicationExit(Action saved) { saveForExit(); saved(); }
 }

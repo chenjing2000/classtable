@@ -5,3 +5,4 @@ dist/
 .vs/
 *.user
 *.tmp
+**/ClassSchedule.settings.json

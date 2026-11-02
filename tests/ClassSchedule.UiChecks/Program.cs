@@ -23,6 +23,8 @@ internal static class Program
         // Load the real theme without running production startup or opening user data.
         var app = new Application { ShutdownMode = ShutdownMode.OnExplicitShutdown };
         app.Resources = new ResourceDictionary { Source = new Uri("pack://application:,,,/ClassSchedule;component/Resources/Theme.xaml") };
+        if (args.Contains("--tray-startup")) return TrayStartupChecks.Run(app, args.Contains("--tray-smoke"));
+        if (args.Contains("--button-feedback")) return ButtonFeedbackChecks.Run(app);
         if (args.Contains("--layout-stability")) return LayoutStabilityChecks.Run(app);
         if (args.Contains("--compact-slots")) return CompactSlotChecks.Run(app);
         if (args.Contains("--duration-selector")) return DurationAndSelectorChecks.Run(app);
@@ -78,7 +80,7 @@ internal static class Program
             var studentPopup = (Popup)studentSelector.Template.FindName("PART_Popup", studentSelector);
             Assert(studentSelector.ActualWidth == 88 && ((FrameworkElement)studentPopup.Child).ActualWidth == 88, "Student display and dropdown outer widths are both 88 DIP");
             studentSelector.IsDropDownOpen = false;
-            Assert(more.ContextMenu!.Items.OfType<MenuItem>().Select(i => (string)i.Header).SequenceEqual(new[] { "总体设置", "课程管理", "学生管理", "更新学生信息" }), "Gear menu has the approved labels and order");
+            Assert(more.ContextMenu!.Items.OfType<MenuItem>().Select(i => (string)i.Header).SequenceEqual(new[] { "开机启动", "总体设置", "课程管理", "学生管理", "更新学生信息" }), "Gear menu has the approved labels and order");
             var studentManager = new StudentManagementWindow(workspace) { Owner = main }; studentManager.Show(); Flush();
             void ClickStudent(string label) { Descendants(studentManager).OfType<Button>().Single(b => b.Content as string == label).RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); Flush(); }
             var studentName = Descendants(studentManager).OfType<TextBox>().Single();

@@ -37,6 +37,10 @@ public sealed class StudentWorkspaceViewModel(WorkspaceViewModel workspace) : Ob
     public void Edit(Guid? id, int? day = null, int period = 1, int week = 1) => Request(() => Open(WorkspacePage.Course, id, day, period, week));
     public void ResetSettings() => Request(() => Open(WorkspacePage.Settings));
     public void RequestClose() => Request(() => CloseRequested?.Invoke());
+    public void SaveForExit()
+    {
+        workspace.Save(Course is not null ? Course.Build() : Settings!.Build());
+    }
     public void CancelSettings()
     {
         Settings = null; pending = null; dateCandidate = null; Confirmation = WorkspaceConfirmation.None;
