@@ -201,3 +201,11 @@ SingleInstance仅负责启动互斥量及窗口激活消息：已有实例时不
 TrayService参考MySchedule，负责NotifyIcon、紧凑WPF菜单、隐藏/恢复和初始后台显示；SingleInstance的激活回调复用Restore。StartupSettings独立处理程序级JSON和当前用户Run注册。App使用OnExplicitShutdown，首次后台隐藏完成后初始化提醒，防止立即到期通知随主窗口一起隐藏。ExitCoordinator按所有者链由内到外调用DialogWindow的退出确认，具体保存仍由各窗口的ViewModel/已有接受回调承担；失败不进入下一步，全部处理后先释放托盘再Shutdown。代码后置确认与原有窗口内草稿导航独立，关闭主窗口不等于退出。详见[实施方案](tray-startup-plan.md)。
 
 提醒展示与事件级追加次数以[弹窗修订](reminder-popup-plan.md)为准：ReminderService通过托盘Restore恢复主窗口，按课程/时段/实际开始时间维护活动窗口；ReminderSession仅在内存中维护额外次数。关闭一个窗口不影响其他事件，全部结束停止公共声音。
+
+## 今天列与提示层修订（2026-11-03）
+
+MainWindow记录日期单元格与实际日期，在日期计时/激活/重新显示时仅更新Background，刷新表格时重新登记，保持原内容缓存和事件。DialogWindow使用统一WindowSurface叠加普通消息，原Layout继续承载正文、固定Footer及确认区；根据固定区高度更新消息留白。StudentWorkspaceWindow将XAML内容接回同一表面，窗口/队列生命周期保持。见[方案](today-toast-plan.md)及[验证](../verification/2026-11-03-today-toast.md)。
+
+## 交互确认叠加层（2026-11-03后续）
+
+确认卡片也由WindowSurface承载，Layout只保留正文与固定Footer。PositionNotifications统一分配两层的底部留白和高度：确认在下，临时提示在上；确认文字ScrollViewer与操作行分开，普通消息沿用原队列。WindowBackground共享主窗口和确认背景且无透明度；卡片滚轮由窗口层提前消费，避免SettingsView整页重定向。见[验证记录](../verification/2026-11-03-floating-confirmations.md)。

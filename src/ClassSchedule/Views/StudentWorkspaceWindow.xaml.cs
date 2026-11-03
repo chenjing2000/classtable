@@ -16,7 +16,7 @@ public partial class StudentWorkspaceWindow : DialogWindow
     {
         InitializeComponent();
         PreviewMouseWheel += (_, e) => { if (PageContent.Content is SettingsView settings) settings.HandlePageWheel(e); };
-        var surface = (UIElement)Content; Content = Layout; Body(surface, false);
+        var surface = (UIElement)Content; Content = WindowSurface; Body(surface, false);
         MinWidth = 480; MinHeight = page == WorkspacePage.Settings ? 480 : 420; ShowInTaskbar = false;
         Footer.Orientation = Orientation.Vertical; Footer.HorizontalAlignment = HorizontalAlignment.Stretch;
         State = new(workspace);

@@ -312,8 +312,12 @@ Test("Deleting all saved courses unlocks a fresh settings page", () => {
         var w = new WorkspaceViewModel(new StudentFileStore(path)); w.Create("测试", Sample());
         var pages = new StudentWorkspaceViewModel(w); pages.ShowSettings(); Equal(false, pages.Settings!.CanChangeMode);
         pages.ShowCourses(); pages.RequestDelete(w.Document!.Courses[0].Id); pages.Confirm();
+        var closeRequested = false;
+        pages.CloseRequested += () => closeRequested = true;
         pages.ShowSettings(); Equal(true, pages.Settings!.CanChangeMode); pages.Settings.Mode = "单节"; pages.Save();
         Equal("one", w.Document.Settings.ClassesUnit); Equal(false, pages.IsDirty);
+        Equal(true, closeRequested);
+        pages = new StudentWorkspaceViewModel(w); pages.ShowSettings();
         pages.Settings!.TotalWeeks = "21"; pages.ResetSettings(); pages.CancelConfirmation(); Equal("21", pages.Settings.TotalWeeks);
         pages.ResetSettings(); pages.Discard(); Equal("20", pages.Settings!.TotalWeeks);
     } finally { if (Directory.Exists(path)) Directory.Delete(path, true); }

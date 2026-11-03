@@ -88,3 +88,7 @@ dotnet run --project src/ClassSchedule/ClassSchedule.csproj
 提醒窗口字号、英文按钮及紧凑布局的最小定向检查：界面测试加`--reminder-popup-layout`，不执行轮次或其他界面检查。
 
 学生管理操作后扫描错误的定向检查：界面测试加`--student-scan-errors`。其他学生文件损坏或不可读时，错误在学生管理底部显示；正常学生的成功操作保持，损坏文件不覆盖。
+
+今天所在日期列采用淡黄橙色背景，跨日、激活或托盘恢复后检查更新；课程原色保持，浏览其他周不自动跳回。普通临时提示及交互确认均在窗口底部居中悬浮，14 DIP文字，不挤压正文或覆盖固定操作按钮。临时提示背景透明度35%、约5秒FIFO；确认背景与主窗口一致且不透明、按钮右对齐并等待用户选择。确认在下、临时提示在上，长文字可滚动且确认按钮保留可见。定向检查使用`--today-toast`，验证记录见[今天列与悬浮提示](docs/verification/2026-11-03-today-toast.md)。
+
+交互确认浮层和设置页卡片滚动的定向检查使用`--floating-confirmations`，见[交互确认悬浮验证](docs/verification/2026-11-03-floating-confirmations.md)。

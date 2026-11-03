@@ -15,6 +15,8 @@
 
 | 主题 | 记录 |
 |---|---|
+| 不透明确认浮层与普通提示上下布局 | [交互确认悬浮](verification/2026-11-03-floating-confirmations.md) |
+| 今天列背景与普通临时提示悬浮 | [日期与悬浮提示](verification/2026-11-03-today-toast.md) |
 | 代码审查与学生扫描错误整改 | [本批审查](verification/2026-11-02-review-cleanup.md) |
 | 跨电脑构建与Windows PowerShell 5.1 | [构建方式对齐](verification/2026-11-02-build-parity.md) |
 | 提醒样式、OK/Later及事件级追加次数 | [提醒弹窗](verification/2026-11-02-reminder-popup.md) |

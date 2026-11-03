@@ -20,7 +20,8 @@ internal static class ConfirmationChecks
         void RightAligned(Window window, string message, params string[] labels)
         {
             var text = Program.Descendants(window).OfType<TextBlock>().Single(t => t.Text == message);
-            var panel = (StackPanel)text.Parent;
+            var card = Program.Descendants(window).OfType<Border>().Single(b => b.Name == "ConfirmationNotice");
+            var panel = (StackPanel)card.Child;
             var row = panel.Children.OfType<StackPanel>().Single();
             Assert(row.HorizontalAlignment == HorizontalAlignment.Right && row.Children.OfType<Button>().Select(b => (string)b.Content).SequenceEqual(labels), "Confirmation choices align right: " + message);
             Assert(Math.Abs(row.TranslatePoint(new Point(row.ActualWidth, 0), panel).X - panel.ActualWidth) < 1, "Confirmation button row reaches right edge");

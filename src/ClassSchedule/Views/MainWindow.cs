@@ -2,6 +2,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Markup;
 using System.Windows.Media;
+using System.Windows.Threading;
 using ClassSchedule.Core;
 using ClassSchedule.ViewModels;
 
@@ -14,6 +15,13 @@ public sealed class MainWindow : DialogWindow
     private readonly TextBlock weekLabel = Ui.Text("第 1 周", 17);
     private readonly TextBlock status = Ui.Text("");
     private readonly Grid table = new();
+    private readonly List<(Border Cell, DateOnly Date, bool Header)> datedCells = [];
+    private readonly Brush headerBackground = new SolidColorBrush(Color.FromRgb(238, 245, 255));
+    private readonly Brush todayHeaderBackground = new SolidColorBrush(Color.FromRgb(255, 231, 190));
+    private readonly Brush todayBackground = new SolidColorBrush(Color.FromRgb(255, 242, 216));
+    private readonly DispatcherTimer dateTimer = new() { Interval = TimeSpan.FromMinutes(1) };
+    private readonly Func<DateOnly> currentDate;
+    private DateOnly? highlightedDate;
     private readonly Button more = Ui.Button("", () => { }, "设置");
     private readonly MenuItem startupItem = new() { Header = "开机启动", IsCheckable = true, IsChecked = true };
     private StartupSettings? startup;
@@ -21,8 +29,10 @@ public sealed class MainWindow : DialogWindow
     private (string? Name, string? Fingerprint, int Week)? renderedTable;
     private DateTime lastWheel;
     private int wheelDelta;
-    public MainWindow(WorkspaceViewModel viewModel) : base("课程表", 600, 600, false)
+    public MainWindow(WorkspaceViewModel viewModel) : this(viewModel, () => DateOnly.FromDateTime(DateTime.Now)) { }
+    internal MainWindow(WorkspaceViewModel viewModel, Func<DateOnly> currentDate) : base("课程表", 600, 600, false)
     {
+        this.currentDate = currentDate;
         vm = viewModel; DataContext = vm; MinWidth = 520; MinHeight = 480; WindowStartupLocation = WindowStartupLocation.CenterScreen;
         // Match the popup's 4 DIP padding plus the option's 8 DIP padding.
         students.Template = (ControlTemplate)XamlReader.Parse("""
@@ -90,6 +100,19 @@ public sealed class MainWindow : DialogWindow
             var direction = wheelDelta > 0 ? -1 : 1; wheelDelta = 0; lastWheel = DateTime.UtcNow; Move(direction);
         };
         body.Children.Add(board); Body(body, false); Render();
+        dateTimer.Tick += CheckDate; dateTimer.Start();
+        Activated += CheckDate;
+        IsVisibleChanged += (_, e) => { if (e.NewValue is true) RefreshDateHighlight(); };
+        Closed += (_, _) => { dateTimer.Stop(); dateTimer.Tick -= CheckDate; Activated -= CheckDate; };
+    }
+    private void CheckDate(object? sender, EventArgs e) => RefreshDateHighlight();
+    internal void RefreshDateHighlight()
+    {
+        var today = currentDate();
+        if (highlightedDate == today) return;
+        highlightedDate = today;
+        foreach (var (cell, date, header) in datedCells)
+            cell.Background = date == today ? (header ? todayHeaderBackground : todayBackground) : (header ? headerBackground : Brushes.White);
     }
     internal void ConfigureStartup(StartupSettings settings) { startup = settings; startupItem.IsChecked = settings.StartWithWindows; }
     public void RefreshStudents()
@@ -121,11 +144,12 @@ public sealed class MainWindow : DialogWindow
         status.Visibility = status.Text.Length == 0 ? Visibility.Collapsed : Visibility.Visible;
         rendering = false;
         var key = (vm.Current?.Name, vm.Current?.Fingerprint, vm.Week);
-        if (renderedTable == key) return;
+        if (renderedTable == key) { RefreshDateHighlight(); return; }
         table.Children.Clear(); table.RowDefinitions.Clear(); table.ColumnDefinitions.Clear();
+        datedCells.Clear(); highlightedDate = null;
         if (vm.Document is null)
         {
-            table.Children.Add(Ui.Column(Ui.Text("欢迎使用课程表", 22), Ui.Note("从设置齿轮菜单进入学生管理新增学生，然后通过总体设置调整学期与课程模式。"))); renderedTable = key; return;
+            table.Children.Add(Ui.Column(Ui.Text("欢迎使用课程表", 22), Ui.Note("从设置齿轮菜单进入学生管理新增学生，然后通过总体设置调整学期与课程模式。"))); renderedTable = key; RefreshDateHighlight(); return;
         }
         var s = vm.Document.Settings;
         table.ColumnDefinitions.Add(new() { Width = new GridLength(78) });
@@ -137,11 +161,13 @@ public sealed class MainWindow : DialogWindow
         for (var col = 0; col < 7; col++)
         {
             var day = days[col]; var date = WeekCalendar.Date(s, vm.Week, day);
-            Put(Centered($"周{"一二三四五六日"[day - 1]}\n{date:MM/dd}"), 0, col + 1, true);
+            var header = Put(Centered($"周{"一二三四五六日"[day - 1]}\n{date:MM/dd}"), 0, col + 1, true);
+            datedCells.Add((header, date, true));
             for (var row = 1; row <= s.ClassesPerDay; row++)
             {
                 var period = row;
                 var cell = Put(new Grid { Background = Brushes.Transparent }, row, col + 1);
+                datedCells.Add((cell, date, false));
                 cell.MouseLeftButtonDown += (_, e) => { if (e.ClickCount == 2) { Edit(null, day, period); e.Handled = true; } };
             }
         }
@@ -160,11 +186,12 @@ public sealed class MainWindow : DialogWindow
                 block.MouseLeftButtonDown += (_, e) => { if (e.ClickCount == 2) { Edit(course.Id); e.Handled = true; } }; table.Children.Add(block);
             }
         renderedTable = key;
+        RefreshDateHighlight();
     }
     private static TextBlock Centered(string text) => new() { Text = text, TextAlignment = TextAlignment.Center, TextWrapping = TextWrapping.Wrap, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(2), FontSize = 12 };
     private Border Put(UIElement element, int row, int col, bool shaded = false)
     {
-        var border = new Border { Child = element, BorderBrush = new SolidColorBrush(Color.FromRgb(222, 232, 246)), BorderThickness = new Thickness(0, 0, 1, 1), Background = shaded ? new SolidColorBrush(Color.FromRgb(238, 245, 255)) : Brushes.White };
+        var border = new Border { Child = element, BorderBrush = new SolidColorBrush(Color.FromRgb(222, 232, 246)), BorderThickness = new Thickness(0, 0, 1, 1), Background = shaded ? headerBackground : Brushes.White };
         Grid.SetRow(border, row); Grid.SetColumn(border, col); table.Children.Add(border); return border;
     }
 }
