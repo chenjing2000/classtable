@@ -19,9 +19,15 @@ public partial class SettingsView : UserControl
         monday.SetBinding(MondayPicker.SelectedDateProperty, new Binding(nameof(vm.FirstMonday)) { Mode = BindingMode.TwoWay });
         var mode = Ui.Choices(nameof(vm.Mode), "单节", "双节"); mode.IsEnabled = vm.CanChangeMode;
         mode.ToolTip = vm.CanChangeMode ? "尚无课程，可以选择单节或双节。" : "已有课程，删除全部课程并保存后才能修改模式。";
-        var fields = Ui.Form(92, ("第一周周一", monday), ("本学期总周数", Ui.NumberInput(nameof(vm.TotalWeeks), 3, rejected)),
-            ("周日归属", Ui.Choices(nameof(vm.Sunday), "上一周", "下一周")), ("每日课时", Ui.Choices(nameof(vm.Count), "8", "10")), ("课程模式", mode));
-        var preview = Ui.Note(""); preview.SetBinding(TextBlock.TextProperty, nameof(vm.ConversionPreview));
+        var swatch = new Border { Width = 24, Height = 24, CornerRadius = new CornerRadius(4), Margin = new Thickness(6, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center };
+        swatch.SetBinding(Border.BackgroundProperty, new Binding(nameof(vm.TodayColor)) { Converter = new ColorPreviewConverter() });
+        var color = Ui.Input(nameof(vm.TodayColor), 90); color.MaxLength = 7;
+        var sundayHint = Ui.Note("切换周日归属时，周日课程跟随日期变化。");
+        var fields = Ui.Form(92, ("本学期总周数", Ui.NumberInput(nameof(vm.TotalWeeks), 3, rejected)), ("第一周周一", monday),
+            ("周日归属", Ui.Choices(nameof(vm.Sunday), "上一周", "下一周")),
+            ("", sundayHint),
+            ("每日课时", Ui.Choices(nameof(vm.Count), "8", "10")), ("课程模式", mode), ("今日颜色", Ui.Row(color, swatch)));
+        Grid.SetColumn(sundayHint, 0); Grid.SetColumnSpan(sundayHint, 2);
         FrameworkElement MinutesInput(string property, int digits)
         {
             var box = Ui.NumberInput(property, digits, rejected); box.Width = 64; box.MinWidth = 0;
@@ -29,13 +35,12 @@ public partial class SettingsView : UserControl
         }
         var parameters = Ui.Form(70, ("课程时长", MinutesInput(nameof(vm.Duration), 3)), ("奇数节后", MinutesInput(nameof(vm.OddBreak), 2)),
             ("偶数节后", MinutesInput(nameof(vm.EvenBreak), 2)), ("上午开始", timeSelectors[0]), ("下午开始", timeSelectors[1]), ("晚上开始", timeSelectors[2]));
-        periodTable = new DataGrid { ItemsSource = vm.Periods, MaxHeight = 310, RowHeight = 28, ColumnHeaderHeight = 28, FontSize = 12, CanUserResizeColumns = false, CanUserResizeRows = false, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled };
-        var table = periodTable;
-        Ui.TextColumn(table, "节次", "Period"); Ui.TextColumn(table, "开始时间", "Start", 1, false); Ui.TextColumn(table, "结束时间", "End", 1, false);
+        var table = new DataGrid { ItemsSource = vm.Periods, IsReadOnly = true, MaxHeight = 310, RowHeight = 28, ColumnHeaderHeight = 28, FontSize = 12, CanUserResizeColumns = false, CanUserResizeRows = false, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled };
+        Ui.TextColumn(table, "节次", "Period"); Ui.TextColumn(table, "开始时间", "Start"); Ui.TextColumn(table, "结束时间", "End");
         Ui.TextColumn(table, "时长（分钟）", "Duration"); Ui.TextColumn(table, "课后间隔", "Gap");
         var content = Ui.Column();
-        var basic = Ui.Card(Ui.Column(Ui.Text("基本信息", 18), fields, preview)); basic.Name = "BasicInformation";
-        var timing = Ui.Card(Ui.Column(Ui.Text("课时参数", 18), parameters)); timing.Name = "ClassParameters";
+        var basic = Ui.Card(Ui.Column(Ui.Text("基础设置", 18), fields)); basic.Name = "BasicInformation";
+        var timing = Ui.Card(Ui.Column(Ui.Text("课程设置", 18), parameters)); timing.Name = "ClassParameters";
         var groups = new Grid { Name = "SettingsGroups" }; groups.Children.Add(basic); groups.Children.Add(timing);
         bool? sideBySide = null;
         void ArrangeGroups(double width)
@@ -57,12 +62,11 @@ public partial class SettingsView : UserControl
         groups.SizeChanged += (_, e) => ArrangeGroups(e.NewSize.Width); ArrangeGroups(600);
         content.Children.Add(groups);
         var tableHeader = new DockPanel();
-        var refresh = Ui.Button("⟳", () => { CommitCells(); try { vm.Generate(false); } catch (Exception ex) when (ex is System.IO.InvalidDataException or FormatException or OverflowException or ArgumentException) { rejected(ex.Message); } }, "根据参数生成默认时间");
+        var refresh = Ui.Button("⟳", () => (Window.GetWindow(this) as DialogWindow)?.Attempt(() => vm.Generate(false)), "根据参数生成默认时间");
         refresh.FontSize = 18; refresh.Padding = new Thickness(8, 2, 8, 2); DockPanel.SetDock(refresh, Dock.Right); tableHeader.Children.Add(refresh); tableHeader.Children.Add(Ui.Text("课时预览", 18));
         content.Children.Add(Ui.Card(Ui.Column(tableHeader, table)));
         page.Content = content;
     }
-    private DataGrid periodTable;
     internal void HandlePageWheel(MouseWheelEventArgs e)
     {
         // Popups have their own visual tree and consume their own wheel events.
@@ -72,5 +76,4 @@ public partial class SettingsView : UserControl
         SettingsPage.ScrollToVerticalOffset(SettingsPage.VerticalOffset - e.Delta / 120.0 * 48);
         e.Handled = true;
     }
-    public void CommitCells() { periodTable.CommitEdit(DataGridEditingUnit.Cell, true); periodTable.CommitEdit(DataGridEditingUnit.Row, true); }
 }

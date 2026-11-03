@@ -3,7 +3,7 @@ using ClassSchedule.Core;
 namespace ClassSchedule.ViewModels;
 
 public enum WorkspacePage { Courses, Course, Settings }
-public enum WorkspaceConfirmation { None, Leave, Dates, Delete, ResetTimes }
+public enum WorkspaceConfirmation { None, Leave, Dates, Delete }
 
 public sealed class StudentWorkspaceViewModel(WorkspaceViewModel workspace) : ObservableObject
 {
@@ -85,7 +85,7 @@ public sealed class StudentWorkspaceViewModel(WorkspaceViewModel workspace) : Ob
     public void RequestDefaults()
     {
         if (Confirmation != WorkspaceConfirmation.None || Settings is null) return;
-        Confirmation = WorkspaceConfirmation.ResetTimes; Changed(null);
+        Settings.Generate(true);
     }
     public void Confirm()
     {
@@ -97,7 +97,6 @@ public sealed class StudentWorkspaceViewModel(WorkspaceViewModel workspace) : Ob
                 var candidate = Document.Clone(); candidate.Courses.RemoveAll(c => c.Id == SelectedCourseId);
                 Commit(candidate, () => Open(WorkspacePage.Courses));
             }
-            else if (Confirmation == WorkspaceConfirmation.ResetTimes) { Settings!.Generate(true); CancelConfirmation(); }
         }
         catch { CancelConfirmation(); throw; }
     }

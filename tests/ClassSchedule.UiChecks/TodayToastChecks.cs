@@ -56,16 +56,28 @@ internal static class TodayToastChecks
             Check(ColorIs(Cell(0, 1).Background, "#FFE7BE"), "Next-week Sunday highlights first column by actual date");
             date = monday; main.RefreshDateHighlight(); Check(ColorIs(Cell(0, 2).Background, "#FFE7BE"), "Monday follows first-column Sunday correctly");
             var height = table.ActualHeight;
-            main.Messages.Enqueue("浮动提示"); main.Messages.Enqueue("下一条"); Flush();
-            var text = Find<TextBlock>(main).Single(t => t.Text == "浮动提示");
-            var notice = Notice(main);
-            Check(Math.Abs(table.ActualHeight - height) < .1, "Transient notice does not shrink timetable");
-            Check(notice.Parent is Grid && Math.Abs(notice.Background.Opacity - .65) < .001 && text.FontSize == 14 && text.Opacity == 1, "Toast overlays with 35 percent transparent background and opaque 14 DIP text");
+            main.Messages.Enqueue("第一条"); main.Messages.Enqueue("第二条"); main.Messages.Enqueue("第三条"); main.Messages.Enqueue("最新"); Flush();
             var root = (FrameworkElement)main.Content;
-            Check(Math.Abs(notice.TranslatePoint(new Point(notice.ActualWidth / 2, 0), root).X - root.ActualWidth / 2) < .1, "Toast is horizontally centered");
-            Check(main.Messages.Current == "浮动提示", "First queued notice remains until its timeout");
-            WaitUntil(() => main.Messages.Current == "下一条"); Check(notice.IsVisible && text.Text == "下一条", "FIFO switches to the next notice after five seconds");
-            WaitUntil(() => main.Messages.Current.Length == 0); Check(!notice.IsVisible && Math.Abs(table.ActualHeight - height) < .1, "Final timeout hides toast without resizing timetable");
+            var visibleCards = Find<Border>(main).Where(b => b.Name == "TransientNotice" && b.IsHitTestVisible).ToArray();
+            Check(visibleCards.Select(b => ((TextBlock)((ScrollViewer)b.Child).Content).Text).SequenceEqual(new[] { "最新", "第三条", "第二条" }),
+                "Overflow retains the newest three in top-to-bottom order");
+            var outgoing = Find<Border>(main).Single(b => b.Name == "TransientNotice" && !b.IsHitTestVisible);
+            Check(outgoing.RenderTransform is TranslateTransform, "Overflow immediately starts a downward exit animation");
+            var notice = visibleCards[0];
+            var text = (TextBlock)((ScrollViewer)notice.Child).Content;
+            Check(Math.Abs(table.ActualHeight - height) < .1, "Transient notices do not shrink timetable");
+            Check(ColorIs(notice.Background, "#F0F0F0") && Math.Abs(notice.Background.Opacity - .75) < .001 && text.FontSize == 14 && text.Opacity == 1, "Only notice background is 25 percent transparent");
+            Check(Math.Abs(notice.ActualWidth - (root.ActualWidth - 24)) < .1, "Notice fills the available width");
+            main.Messages.Error("错误一", "save"); main.Messages.Error("错误二", "other"); Flush();
+            Check(Notice(main).IsVisible && main.Messages.Current == "错误一", "Errors occupy the notice area one at a time");
+            Click(main, "×"); Flush();
+            Check(main.Messages.Current == "" && main.Messages.Exiting?.Text == "错误一", "Next error waits while current one slides out");
+            WaitUntil(() => main.Messages.Current == "错误二");
+            main.Messages.ResolveErrors("other"); Flush();
+            WaitUntil(() => main.Messages.Current == "最新");
+            WaitUntil(() => main.Messages.Current.Length == 0 && main.Messages.Exiting is null);
+            Check(!Find<Border>(main).Any(b => b.Name == "TransientNotice") && Math.Abs(table.ActualHeight - height) < .1,
+                "Queued ordinary notices resume, expire, and leave layout intact");
 
             var manager = new StudentManagementWindow(workspace) { Owner = main }; manager.Show(); Flush();
             Find<ListBox>(manager).Single().SelectedItem = "周日"; Click(manager, "删除"); Flush();
@@ -78,7 +90,6 @@ internal static class TodayToastChecks
             var point = no.TranslatePoint(new Point(no.ActualWidth / 2, no.ActualHeight / 2), manager);
             Check(Ui.Ancestor<Button>(manager.InputHitTest(point) as DependencyObject) == no && ((StackPanel)no.Parent).HorizontalAlignment == HorizontalAlignment.Right, "Confirmation No remains right aligned and clickable");
             manager.Width = manager.MinWidth; manager.Height = manager.MinHeight;
-            manager.Messages.Enqueue("较长提示排队");
             var floatingText = (TextBlock)((ScrollViewer)floating.Child).Content;
             floatingText.Text = string.Concat(Enumerable.Repeat("较长的错误提示信息需要完整阅读，", 20)); Flush();
             Check(floating.IsVisible && floating.ActualHeight > 0 && ((ScrollViewer)floating.Child).ScrollableHeight > 0 && floating.TranslatePoint(new Point(0, floating.ActualHeight), manager).Y <= no.TranslatePoint(new Point(), manager).Y, "Long toast scrolls at minimum size without covering confirmation choices");
@@ -94,7 +105,7 @@ internal static class TodayToastChecks
                 var layout = (DockPanel)surface.Children[0]; var body = (FrameworkElement)layout.Children[^1]; var before = body.ActualHeight;
                 window.Messages.Enqueue("统一悬浮信息"); Flush(); var overlay = Notice(window);
                 var label = (TextBlock)((ScrollViewer)overlay.Child).Content;
-                Check(overlay.IsVisible && label.FontSize == 14 && overlay.Background.Opacity == .65 && Math.Abs(body.ActualHeight - before) < .1, "Common floating notice preserves layout: " + window.Title);
+                Check(overlay.IsVisible && label.FontSize == 14 && overlay.Background.Opacity == .75 && Math.Abs(body.ActualHeight - before) < .1, "Common floating notice preserves layout: " + window.Title);
                 if (ReferenceEquals(window, slot)) Click(slot, "取消"); else window.Close();
             }
             var ten = StudentDocument.Create(monday, "two"); ten.Settings.ClassesPerDay = 10;
@@ -103,6 +114,10 @@ internal static class TodayToastChecks
             workspace.Create("十节", ten); workspace.Move(1 - workspace.Week); main.RefreshStudents(); date = monday; main.RefreshDateHighlight(); Flush();
             var doubleBlock = table.Children.OfType<Border>().Single(b => b.Child is TextBlock label && label.Text == "双节");
             Check(Enumerable.Range(1, 10).All(row => ColorIs(Cell(row, 1).Background, "#FFF2D8")) && Grid.GetRowSpan(doubleBlock) == 2, "Ten-period double-class mode highlights every cell and preserves course span");
+            ten.Settings.TodayColor = "#A1B2C3";
+            workspace.Save(ten); main.RefreshStudents(); Flush();
+            Check(ColorIs(Cell(0, 1).Background, "#A1B2C3") && ColorIs(Cell(1, 1).Background, "#A1B2C3"),
+                "Saved custom color refreshes the whole today column on the same date");
             main.Close(); Console.WriteLine($"TODAY/TOAST CHECKS PASSED: {checks}"); return 0;
         }
         catch (Exception ex) { Console.Error.WriteLine(ex); return 1; }

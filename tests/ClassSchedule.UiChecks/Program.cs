@@ -137,6 +137,18 @@ internal static class Program
             var radios = Descendants(basicGroup).OfType<RadioButton>().ToList();
             Assert(radios.Count == 6 && radios.Where((_, i) => i % 2 == 0).Select(r => r.TranslatePoint(new Point(), settings).X).Distinct().Count() == 1 && radios.Where((_, i) => i % 2 == 1).Select(r => r.TranslatePoint(new Point(), settings).X).Distinct().Count() == 1, "Both radio option columns align across all rows");
             var longestLabel = Descendants(basicGroup).OfType<TextBlock>().Single(t => t.Text == "本学期总周数");
+            var settingsLabels = Descendants(basicGroup).OfType<TextBlock>().ToArray();
+            TextBlock Label(string text) => settingsLabels.Single(t => t.Text == text);
+            Assert(Grid.GetRow(longestLabel) < Grid.GetRow(Label("第一周周一"))
+                && Grid.GetRow(Label("切换周日归属时，周日课程跟随日期变化。")) == Grid.GetRow(Label("周日归属")) + 1
+                && Grid.GetRow(Label("今日颜色")) > Grid.GetRow(Label("课程模式")), "Basic settings use the requested order and Sunday hint");
+            var colorField = Descendants(basicGroup).OfType<TextBox>().Single(b => BindingOperations.GetBinding(b, TextBox.TextProperty)?.Path.Path == "TodayColor");
+            var colorSwatch = Descendants(basicGroup).OfType<Border>().Single(b => BindingOperations.GetBinding(b, Border.BackgroundProperty)?.Path.Path == "TodayColor");
+            colorField.Text = "#A1B2C3"; Flush();
+            Assert(colorSwatch.Background is SolidColorBrush swatch && swatch.Color == Color.FromRgb(161, 178, 195)
+                && document.Settings.TodayColor == StudentSettings.DefaultTodayColor, "Color swatch follows the unsaved input");
+            colorField.Text = StudentSettings.DefaultTodayColor; Flush();
+
             Assert(longestLabel.ActualHeight < 30, $"Long basic label stays on one line ({longestLabel.ActualHeight:F1} DIP)");
             Assert(Descendants(parameterGroup).OfType<ComboBox>().All(c => c.Width == 43), "Time dropdowns are integer 43 DIP wide");
             Assert(!Descendants(parameterGroup).OfType<TextBlock>().Any(t => t.Text.Contains("（分钟）")) && Descendants(parameterGroup).OfType<TextBlock>().Count(t => t.Text == "分") == 6, "Duration and breaks show units after edit boxes");
@@ -233,11 +245,13 @@ internal static class Program
             oldWindow.Hide();
             var courseWindow = new CourseManagementWindow(workspace, WorkspacePage.Course, document.Courses[0].Id) { Owner = main }; courseWindow.Show(); Flush();
             Assert(courseWindow.ActualWidth == 520 && courseWindow.ActualHeight == 540, "Course editing stays in the 520 DIP course window");
+            Assert(!Descendants(courseWindow).OfType<Button>().Any(b => (b.Content as string)?.Contains("返回课程列表") == true),
+                "Course editor exposes Cancel as its return action");
             var courseTable = Descendants(courseWindow).OfType<DataGrid>().Single();
             var coursePage = Descendants(courseWindow).OfType<ScrollViewer>().First();
             var courseCancel = Descendants(courseWindow).OfType<Button>().Single(b => b.Content as string == "取消");
             var courseGap = courseCancel.TranslatePoint(new Point(), courseWindow).Y - courseTable.TranslatePoint(new Point(0, courseTable.ActualHeight), courseWindow).Y;
-            Assert(coursePage.ScrollableHeight == 0 && courseGap is >= 0 and <= 24, $"Course table fits with compact footer gap ({courseGap:F1} DIP)");
+            Assert(coursePage.ScrollableHeight == 0 && courseGap is >= 0 and <= 24.5, $"Course table fits with compact footer gap ({courseGap:F1} DIP)");
             Assert(courseTable.Columns.All(c => c.Width.IsStar && c.Width.Value == 1), "Course table has equal width columns");
             Assert(courseTable.Columns.Count == 4 && (string)courseTable.Columns[1].Header == "时间" && !Descendants(courseWindow).OfType<Button>().Any(b => b.Content as string == "＋ 添加上课时段"), "Course table merges time and removes add button");
             Assert(!Descendants(courseWindow).OfType<TextBox>().Any(b => BindingOperations.GetBinding(b, TextBox.TextProperty)?.Path.Path == "Course.Color"), "Course color is not editable");

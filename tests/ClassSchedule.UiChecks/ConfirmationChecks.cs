@@ -59,9 +59,22 @@ internal static class ConfirmationChecks
             Click(course, "删除课程"); Click(course, "是");
             Assert(workspace.Document.Courses.Count == 0 && course.State.Page == WorkspacePage.Courses, "Yes deletes course and its schedules"); course.Close();
 
-            var settings = new GeneralSettingsWindow(workspace); settings.Show(); settings.State.RequestDefaults(); Flush();
-            RightAligned(settings, "仅恢复课时参数和实际课时，是否继续？", "恢复默认", "取消");
-            settings.State.CancelConfirmation(); settings.Close();
+            var settings = new GeneralSettingsWindow(workspace); settings.Show(); Flush();
+            settings.State.Settings!.TodayColor = "#123456"; settings.State.Settings.Duration = "35";
+            Click(settings, "默认值"); Flush();
+            Assert(settings.State.Confirmation == WorkspaceConfirmation.None
+                && settings.State.Settings.TodayColor == StudentSettings.DefaultTodayColor
+                && settings.State.Settings.Periods[0].End == "08:45", "Defaults restore the draft color, parameters, and preview immediately");
+            var settingsDraft = settings.State.Settings;
+            settingsDraft.Duration = "180";
+            Click(settings, "保存"); Flush();
+            Assert(settings.IsVisible && settings.State.Settings == settingsDraft && settings.Messages.Visible.Single().Operation is not null
+                && workspace.Document!.Settings.ClassPeriods[0].End == "08:45", "Invalid save reports a persistent error and keeps the draft and saved data");
+            settingsDraft.Duration = "40"; settingsDraft.TodayColor = "#A1B2C3";
+            Click(settings, "保存"); Flush();
+            Assert(!settings.IsVisible && workspace.Document!.Settings.TodayColor == "#A1B2C3"
+                && workspace.Document.Settings.ClassPeriods[0].End == "08:40", "Save regenerates preview from draft parameters and persists the color");
+
             Console.WriteLine($"CONFIRMATION CHECKS PASSED: {checks}"); return 0;
         }
         catch (Exception ex) { Console.Error.WriteLine(ex); return 1; }

@@ -4,7 +4,6 @@
  <Grid>
   <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
   <Grid x:Name="PageHeading" Grid.Row="0" Margin="0,0,0,6">
-   <Button x:Name="BackButton" Content="‹ 返回课程列表" HorizontalAlignment="Left" Click="Back_Click"/>
    <TextBlock x:Name="Heading" FontSize="20" Margin="6,4" VerticalAlignment="Center" HorizontalAlignment="Center"/>
   </Grid>
   <ContentControl x:Name="PageContent" Grid.Row="1"/>

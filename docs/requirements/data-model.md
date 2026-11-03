@@ -8,6 +8,7 @@
 {
   "schemaVersion": 2,
   "settings": {
+    "todayColor": "#FFF2D8",
     "firstWeekMonday": "2026-08-31",
     "totalWeeks": 20,
     "sundayBelongsTo": "next",
@@ -53,6 +54,7 @@
 
 ## 字段及校验约束
 
+- `todayColor` 是可选的 #RRGGBB 字段，缺失时使用 #FFF2D8。
 - schemaVersion=2。第一周周一必须为星期一，totalWeeks为正整数；sundayBelongsTo只允许previous/next。
 - classesPerDay只允许8/10；classesUnit只允许one/two，默认one，不在课程或时段中重复保存。已保存课程数0时允许更改，有课程时禁止；先删除全部课程并保存后方可再改。切换学生加载其JSON里的设置及课程，不套用别人的配置。
 - classPeriods完整覆盖1..classesPerDay，各节开始早于结束，按节次时间有序且不重叠。时长和实际课后间隔只计算、不存储。

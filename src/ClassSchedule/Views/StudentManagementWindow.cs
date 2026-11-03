@@ -16,7 +16,11 @@ public sealed class StudentManagementWindow : DialogWindow
     private bool allowClose;
     public StudentManagementWindow(WorkspaceViewModel workspace) : base("学生管理", 320, 340, false)
     {
-        MinWidth = 300; MinHeight = 300; ShowInTaskbar = false; Model = new(workspace, Messages.Enqueue); DataContext = Model;
+        MinWidth = 300; MinHeight = 300; ShowInTaskbar = false; Model = new(workspace, errors =>
+        {
+            if (errors.Count == 0) Messages.ResolveErrors("student-scan");
+            else foreach (var error in errors) Messages.Error(error, "student-scan");
+        }); DataContext = Model;
         students.Style = (Style)FindResource("StudentList");
         Model.Select(null);
         form.RowDefinitions.Add(new() { Height = GridLength.Auto }); form.RowDefinitions.Add(new()); form.RowDefinitions.Add(new() { Height = GridLength.Auto });

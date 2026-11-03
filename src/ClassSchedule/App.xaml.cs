@@ -37,7 +37,7 @@ public partial class App : Application
             if (Dispatcher.HasShutdownStarted) return;
             reminders = new ReminderService(workspace, window, window.Messages.Enqueue, restoreMain: tray.Restore);
             window.RefreshStudents();
-            if (!loaded) window.Messages.Enqueue("开机启动设置失败：" + settings.LastError);
+            if (!loaded) window.Messages.Error("开机启动设置失败：" + settings.LastError, "startup");
         }, System.Windows.Threading.DispatcherPriority.ContextIdle);
     }
     protected override void OnExit(ExitEventArgs e) { tray?.Dispose(); reminders?.Dispose(); instance?.Dispose(); base.OnExit(e); }

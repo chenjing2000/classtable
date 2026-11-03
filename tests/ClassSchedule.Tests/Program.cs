@@ -98,13 +98,22 @@ Test("Strict JSON rejects missing renamed null and unknown fields", () => {
     var json = System.Text.Encoding.UTF8.GetString(DocumentJson.Write(Sample())).Replace("\"classesUnit\"", "\"courseUnit\"");
     Reject(() => DocumentJson.Read(System.Text.Encoding.UTF8.GetBytes(json)));
 });
-Test("Notifications grant every visible message five seconds and collapse", () => {
+Test("Notifications retain latest three, pause for errors and exit in order", () => {
     var now = DateTimeOffset.UtcNow; using var q = new NotificationQueue(() => now);
-    q.Enqueue("A"); now = now.AddSeconds(4); q.Enqueue("B"); q.Enqueue("B"); q.Advance(); Equal("A", q.Current);
-    now = now.AddSeconds(1); q.Advance(); Equal("B", q.Current);
-    now = now.AddSeconds(4); q.Advance(); Equal("B", q.Current);
-    now = now.AddSeconds(1); q.Advance(); Equal("", q.Current);
-    q.Dispose(); q.Enqueue("C"); Equal("", q.Current);
+    q.Enqueue("A"); q.Enqueue("B"); q.Enqueue("C"); q.Enqueue("D");
+    Equal("D,C,B", string.Join(",", q.Visible.Select(x => x.Text))); Equal("A", q.Exiting!.Text);
+    now = now.AddSeconds(1); q.Advance();
+    q.Error("invalid", "save"); q.Error("invalid", "save"); q.Error("disk", "write");
+    q.Enqueue("E"); now = now.AddSeconds(10); q.Advance(); Equal("invalid", q.Current);
+    q.ResolveErrors("save"); Equal("", q.Current); Equal("invalid", q.Exiting!.Text);
+    now += NotificationQueue.ExitDuration; q.Advance(); Equal("disk", q.Current);
+    q.DismissError(q.Visible[0]); now += NotificationQueue.ExitDuration; q.Advance();
+    Equal("E,D,C", string.Join(",", q.Visible.Select(x => x.Text)));
+    now = now.AddSeconds(3); q.Advance(); Equal("C", q.Exiting!.Text);
+    now += NotificationQueue.ExitDuration; q.Advance(); Equal("D", q.Exiting!.Text);
+    now += NotificationQueue.ExitDuration; q.Advance(); Equal("E", q.Exiting!.Text);
+    now += NotificationQueue.ExitDuration; q.Advance(); Equal("", q.Current);
+    q.Dispose(); q.Enqueue("F"); Equal("", q.Current);
 });
 Test("Full calendar range validated for next mode near year 10000", () => {
     var d = StudentDocument.Create(new DateOnly(9999, 12, 27), "one"); d.Settings.TotalWeeks = 1; d.Settings.SundayBelongsTo = "next";
@@ -123,11 +132,18 @@ Test("Course and child edits remain drafts until committed", () => {
     Equal("草稿地点", child.Build().Location); Equal("", d.Courses[0].Schedules[0].Location);
     Equal("草稿", vm.Build().Courses[0].Name);
 });
-Test("Time generation preserves user edits until explicit action", () => {
+Test("Settings save regenerates preview and color defaults stay in draft", () => {
     var d = Sample(); var vm = new SettingsViewModel(d); vm.Periods[0].End = "08:40"; vm.Duration = "40";
-    Equal("08:40", vm.Build().Settings.ClassPeriods[0].End); Equal("08:55", vm.Build().Settings.ClassPeriods[1].Start);
+    Equal("08:40", vm.Build().Settings.ClassPeriods[0].End); Equal("08:50", vm.Build().Settings.ClassPeriods[1].Start);
     vm.Generate(false); Equal("08:50", vm.Periods[1].Start); vm.Generate(true); Equal("08:55", vm.Periods[1].Start);
     Equal("08:45", d.Settings.ClassPeriods[0].End);
+    vm.TodayColor = "#102030"; Equal("#102030", vm.Build().Settings.TodayColor);
+    Equal(StudentSettings.DefaultTodayColor, d.Settings.TodayColor);
+    vm.TodayColor = "#bad"; Reject(() => vm.Build());
+    vm.Generate(true); Equal(StudentSettings.DefaultTodayColor, vm.TodayColor);
+    var legacy = System.Text.Encoding.UTF8.GetString(DocumentJson.Write(d))
+        .Replace("\"todayColor\": \"#FFF2D8\",", "");
+    Equal(StudentSettings.DefaultTodayColor, DocumentJson.Read(System.Text.Encoding.UTF8.GetBytes(legacy)).Settings.TodayColor);
 });
 Test("Workspace publishes state only after successful save", () => {
     var path = Path.Combine(AppContext.BaseDirectory, "test-data-" + Guid.NewGuid());
@@ -182,9 +198,9 @@ Test("Numeric text admits only bounded ASCII digit strings", () => {
     foreach (var text in new[] { "", "0", "09", "99" }) Equal(true, NumericText.IsValid(text, 2));
     foreach (var text in new[] { "100", " 1", "１", "一", "1.0", "-1", "2\n", "1e2" }) Equal(false, NumericText.IsValid(text, 2));
     var vm = new SettingsViewModel(Sample()) { OddBreak = "", EvenBreak = "0" }; Reject(() => vm.Build());
-    vm.OddBreak = "99"; Equal(99, vm.Build().Settings.TimeGeneration.OddBreakMinutes);
+    vm.Duration = "20"; vm.OddBreak = "99"; Equal(99, vm.Build().Settings.TimeGeneration.OddBreakMinutes);
     vm.OddBreak = "000"; Reject(() => vm.Build());
-    vm.OddBreak = "99"; vm.EvenBreak = "99"; var start = vm.Periods[1].Start;
+    vm.Duration = "45"; vm.OddBreak = "99"; vm.EvenBreak = "99"; var start = vm.Periods[1].Start;
     Reject(() => vm.Generate(false)); Equal(start, vm.Periods[1].Start);
 });
 Test("Empty students can change mode; existing courses lock old mode", () => {

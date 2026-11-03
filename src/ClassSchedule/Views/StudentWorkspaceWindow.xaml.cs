@@ -28,7 +28,6 @@ public partial class StudentWorkspaceWindow : DialogWindow
         {
             if (allowClose || ExitApproved) return;
             if (ApplicationExitPending) { e.Cancel = true; return; }
-            CommitCells();
             if (State.Confirmation != WorkspaceConfirmation.None) { e.Cancel = true; State.CancelConfirmation(); }
             else if (State.IsDirty) { e.Cancel = true; Run(State.RequestClose); }
         };
@@ -46,27 +45,28 @@ public partial class StudentWorkspaceWindow : DialogWindow
     protected override bool HasExitChanges => State.IsDirty;
     protected override void PrepareApplicationExit()
     {
-        CommitCells(); State.CancelConfirmation(); PageHeading.IsEnabled = false;
+        State.CancelConfirmation(); PageHeading.IsEnabled = false;
     }
     protected override void SaveApplicationExit(Action saved)
     {
-        CommitCells();
-        void Save() { if (Attempt(State.SaveForExit)) saved(); else ShowExitConfirmation(); }
+        void Save() { if (Attempt(State.SaveForExit, nameof(State.Save))) saved(); else ShowExitConfirmation(); }
         if (State.Settings?.ChangesDates == true)
             SetConfirmation("修改学期起点会改变所有课程的实际日期。是否保存？", ("保存新日期", Save), ("继续编辑", ShowExitConfirmation));
         else Save();
     }
     private void PageStateChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e) => Render();
-    private void CommitCells() { if (PageContent.Content is SettingsView view) view.CommitCells(); }
-    private void Run(Action action) { CommitCells(); Attempt(action); }
-    private void Back_Click(object sender, RoutedEventArgs e) => Run(State.ShowCourses);
+    private void Run(Action action)
+    {
+        var savingDates = action == State.Confirm && State.Confirmation == WorkspaceConfirmation.Dates;
+        Attempt(action, action == State.Save || savingDates ? nameof(State.Save) : null);
+    }
     private void Render()
     {
         var draft = (object?)State.Course ?? State.Settings ?? (object)State.Document;
         if (!ReferenceEquals(renderedDraft, draft) || renderedPage != State.Page)
         {
             renderedDraft = draft; renderedPage = State.Page; Footer.Children.Clear();
-            BackButton.Visibility = State.Page == WorkspacePage.Course ? Visibility.Visible : Visibility.Collapsed;
+            PageHeading.MinHeight = State.Page == WorkspacePage.Course ? 48 : 0;
             var actions = Ui.Row(); actions.HorizontalAlignment = HorizontalAlignment.Right;
             var bar = new DockPanel(); DockPanel.SetDock(actions, Dock.Right); bar.Children.Add(actions); Footer.Children.Add(bar);
             if (State.Page == WorkspacePage.Courses)
@@ -92,7 +92,7 @@ public partial class StudentWorkspaceWindow : DialogWindow
             {
                 Heading.Text = "总体设置";
                 PageContent.Content = new SettingsView(State.Settings!, Messages.Enqueue);
-                var defaults = Ui.Button("恢复默认课时", () => Run(State.RequestDefaults)); defaults.HorizontalAlignment = HorizontalAlignment.Left; bar.Children.Add(defaults);
+                var defaults = Ui.Button("默认值", () => Run(State.RequestDefaults)); defaults.HorizontalAlignment = HorizontalAlignment.Left; bar.Children.Add(defaults);
                 actions.Children.Add(Ui.Button("取消修改", State.CancelSettings));
                 var save = Ui.Button("保存", () => Run(State.Save)); save.IsDefault = true; actions.Children.Add(save);
             }
@@ -106,7 +106,5 @@ public partial class StudentWorkspaceWindow : DialogWindow
             SetConfirmation("修改学期起点会改变所有课程的实际日期。是否保存？", ("保存新日期", () => Run(State.Confirm)), ("继续编辑", State.CancelConfirmation));
         else if (State.Confirmation == WorkspaceConfirmation.Delete)
             SetConfirmation("是否删除这门课程及全部上课时段？", ("是", () => Run(State.Confirm)), ("否", State.CancelConfirmation));
-        else if (State.Confirmation == WorkspaceConfirmation.ResetTimes)
-            SetConfirmation("仅恢复课时参数和实际课时，是否继续？", ("恢复默认", () => Run(State.Confirm)), ("取消", State.CancelConfirmation));
     }
 }

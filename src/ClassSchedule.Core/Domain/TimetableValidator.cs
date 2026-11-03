@@ -4,6 +4,8 @@ namespace ClassSchedule.Core;
 
 public static class TimetableValidator
 {
+    public static bool IsRgbColor(string? color) => color is { Length: 7 } && Regex.IsMatch(color, "^#[0-9a-fA-F]{6}$");
+
     public static void Validate(StudentDocument d)
     {
         void Require(bool condition, string message) { if (!condition) throw new InvalidDataException(message); }
@@ -11,6 +13,7 @@ public static class TimetableValidator
         var s = d.Settings ?? throw new InvalidDataException("缺少学生设置。");
         Require(s.FirstWeekMonday.DayOfWeek == DayOfWeek.Monday, "本学期第一周周一必须是星期一。");
         Require(s.TotalWeeks is >= 1 and <= 104, "学期总周数必须为1–104。");
+        Require(IsRgbColor(s.TodayColor), "今日颜色请输入 #RRGGBB。");
         Require(s.SundayBelongsTo is "previous" or "next", "周日归属不合法。");
         Require(s.ClassesPerDay is 8 or 10, "每日课时必须为8或10。");
         Require(s.ClassesUnit is "one" or "two", "课程模式必须为one或two。");
@@ -36,7 +39,7 @@ public static class TimetableValidator
             if (course is null) throw new InvalidDataException("课程不能为空。");
             Require(course.Id != Guid.Empty && ids.Add(course.Id), "课程ID为空或重复。");
             Require(!string.IsNullOrWhiteSpace(course.Name), "课程名称不能为空。");
-            Require(course.Color is { Length: 7 } && Regex.IsMatch(course.Color, "^#[0-9a-fA-F]{6}$"), $"{course.Name}的颜色格式无效。");
+            Require(IsRgbColor(course.Color), $"{course.Name}的颜色格式无效。");
             Require(course.ReminderCount is >= 1 and <= 99, "提醒次数必须为1–99。");
             Require(course.ReminderIntervalMinutes is >= 1 and <= 999, "提醒间隔必须为1–999分钟。");
             Require(course.ReminderDurationMinutes >= 1 && course.ReminderDurationMinutes <= course.ReminderIntervalMinutes,

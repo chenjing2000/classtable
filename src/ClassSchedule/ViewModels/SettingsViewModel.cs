@@ -23,10 +23,10 @@ public sealed class SettingsViewModel : ObservableObject
 {
     private readonly StudentDocument original;
     private readonly string initial;
-    private string Snapshot() => System.Text.Json.JsonSerializer.Serialize(new { FirstMonday, TotalWeeks, Count, Sunday, Mode, Duration, OddBreak, EvenBreak, Morning, Afternoon, Evening, Periods = Periods.Select(p => new { p.Start, p.End }) });
+    private string Snapshot() => System.Text.Json.JsonSerializer.Serialize(new { FirstMonday, TotalWeeks, Count, Sunday, Mode, TodayColor, Duration, OddBreak, EvenBreak, Morning, Afternoon, Evening, Periods = Periods.Select(p => new { p.Start, p.End }) });
     public bool IsDirty => initial != Snapshot();
     private string count;
-    private string sunday;
+    private string todayColor;
     private DateTime? firstMonday;
     public string StudentName { get; set; } = "";
     public bool CanChangeMode => original.Courses.Count == 0;
@@ -40,7 +40,8 @@ public sealed class SettingsViewModel : ObservableObject
     public string Afternoon { get; set; }
     public string Evening { get; set; }
     public ObservableCollection<PeriodRow> Periods { get; } = [];
-    public string Sunday { get => sunday; set { if (Set(ref sunday, value)) Changed(nameof(ConversionPreview)); } }
+    public string Sunday { get; set; }
+    public string TodayColor { get => todayColor; set => Set(ref todayColor, value); }
     public string Count
     {
         get => count;
@@ -56,25 +57,12 @@ public sealed class SettingsViewModel : ObservableObject
             UpdateGaps();
         }
     }
-    public string ConversionPreview
-    {
-        get
-        {
-            if (sunday == (original.Settings.SundayBelongsTo == "next" ? "下一周" : "上一周")) return "切换周日归属将保留所有课程实际日期，自动调整周次。";
-            try
-            {
-                var converted = WeekCalendar.ChangeSunday(original, sunday == "下一周" ? "next" : "previous");
-                return $"保存后：第一周周一 {converted.Settings.FirstWeekMonday:yyyy/MM/dd}，共{converted.Settings.TotalWeeks}周；所有课程日期不变。";
-            }
-            catch (Exception ex) when (ex is InvalidDataException or ArgumentException) { return ex.Message; }
-        }
-    }
     public SettingsViewModel(StudentDocument document)
     {
         original = document.Clone();
         var s = document.Settings; var p = s.TimeGeneration;
         FirstMonday = s.FirstWeekMonday.ToDateTime(TimeOnly.MinValue); TotalWeeks = s.TotalWeeks.ToString();
-        count = s.ClassesPerDay.ToString(); sunday = s.SundayBelongsTo == "next" ? "下一周" : "上一周";
+        count = s.ClassesPerDay.ToString(); todayColor = s.TodayColor; Sunday = s.SundayBelongsTo == "next" ? "下一周" : "上一周";
         Mode = s.ClassesUnit == "one" ? "单节" : "双节";
         Duration = p.DurationMinutes.ToString(); OddBreak = p.OddBreakMinutes.ToString(); EvenBreak = p.EvenBreakMinutes.ToString();
         Morning = p.MorningStart; Afternoon = p.AfternoonStart; Evening = p.EveningStart;
@@ -109,7 +97,10 @@ public sealed class SettingsViewModel : ObservableObject
     {
         if (defaults)
         {
-            Duration = "45"; OddBreak = "10"; EvenBreak = "20"; Morning = "08:00"; Afternoon = "14:00"; Evening = "19:00";
+            var parameters = new TimeGenerationSettings();
+            TodayColor = StudentSettings.DefaultTodayColor;
+            Duration = parameters.DurationMinutes.ToString(); OddBreak = parameters.OddBreakMinutes.ToString(); EvenBreak = parameters.EvenBreakMinutes.ToString();
+            Morning = parameters.MorningStart; Afternoon = parameters.AfternoonStart; Evening = parameters.EveningStart;
             Changed(nameof(Duration)); Changed(nameof(OddBreak)); Changed(nameof(EvenBreak)); Changed(nameof(Morning)); Changed(nameof(Afternoon)); Changed(nameof(Evening));
         }
         var settings = new StudentSettings { ClassesPerDay = int.Parse(Count), TimeGeneration = Parameters() };
@@ -118,6 +109,7 @@ public sealed class SettingsViewModel : ObservableObject
     }
     public StudentDocument Build()
     {
+        Generate(false);
         if (FirstMonday is null) throw new InvalidDataException("请选择本学期第一周周一。");
         if (Mode is not ("单节" or "双节")) throw new InvalidDataException("请选择单节或双节。");
         var monday = DateOnly.FromDateTime(FirstMonday.Value); var weeks = Number(TotalWeeks, "总周数");
@@ -130,6 +122,7 @@ public sealed class SettingsViewModel : ObservableObject
         if (!converting) { s.FirstWeekMonday = monday; s.TotalWeeks = weeks; }
         s.SundayBelongsTo = target; s.ClassesPerDay = int.Parse(Count); s.ClassesUnit = Mode == "单节" ? "one" : "two";
         if (!CanChangeMode && s.ClassesUnit != original.Settings.ClassesUnit) throw new InvalidDataException("已有课程时不能更改课程模式。");
+        s.TodayColor = TodayColor.Trim();
         s.TimeGeneration = Parameters(); s.ClassPeriods = Periods.Select(p => p.ToModel()).ToList();
         TimetableValidator.Validate(candidate); return candidate;
     }

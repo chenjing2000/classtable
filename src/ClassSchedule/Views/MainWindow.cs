@@ -17,8 +17,8 @@ public sealed class MainWindow : DialogWindow
     private readonly Grid table = new();
     private readonly List<(Border Cell, DateOnly Date, bool Header)> datedCells = [];
     private readonly Brush headerBackground = new SolidColorBrush(Color.FromRgb(238, 245, 255));
-    private readonly Brush todayHeaderBackground = new SolidColorBrush(Color.FromRgb(255, 231, 190));
-    private readonly Brush todayBackground = new SolidColorBrush(Color.FromRgb(255, 242, 216));
+    private Brush todayHeaderBackground = new SolidColorBrush(Color.FromRgb(255, 231, 190));
+    private Brush todayBackground = new SolidColorBrush(Color.FromRgb(255, 242, 216));
     private readonly DispatcherTimer dateTimer = new() { Interval = TimeSpan.FromMinutes(1) };
     private readonly Func<DateOnly> currentDate;
     private DateOnly? highlightedDate;
@@ -72,7 +72,8 @@ public sealed class MainWindow : DialogWindow
         startupItem.Click += (_, _) =>
         {
             if (startup is null) return;
-            if (!startup.SetStartWithWindows(startupItem.IsChecked)) Messages.Enqueue("开机启动设置失败：" + startup.LastError);
+            if (!startup.SetStartWithWindows(startupItem.IsChecked)) Messages.Error("开机启动设置失败：" + startup.LastError, "startup");
+            else Messages.ResolveErrors("startup");
             startupItem.IsChecked = startup.StartWithWindows;
         };
         MenuItem Item(string text, Action action)
@@ -117,7 +118,13 @@ public sealed class MainWindow : DialogWindow
     internal void ConfigureStartup(StartupSettings settings) { startup = settings; startupItem.IsChecked = settings.StartWithWindows; }
     public void RefreshStudents()
     {
-        Attempt(() => { foreach (var error in vm.Refresh()) Messages.Enqueue(error); }); Render();
+        Attempt(() =>
+        {
+            var errors = vm.Refresh();
+            if (errors.Count == 0) Messages.ResolveErrors(nameof(RefreshStudents));
+            else foreach (var error in errors) Messages.Error(error, nameof(RefreshStudents));
+        });
+        Render();
     }
     private void Move(int delta) { vm.Move(delta); Render(); }
     private void ManageStudents()
@@ -152,6 +159,10 @@ public sealed class MainWindow : DialogWindow
             table.Children.Add(Ui.Column(Ui.Text("欢迎使用课程表", 22), Ui.Note("从设置齿轮菜单进入学生管理新增学生，然后通过总体设置调整学期与课程模式。"))); renderedTable = key; RefreshDateHighlight(); return;
         }
         var s = vm.Document.Settings;
+        var todayColor = (Color)ColorConverter.ConvertFromString(s.TodayColor);
+        todayBackground = new SolidColorBrush(todayColor);
+        todayHeaderBackground = new SolidColorBrush(todayColor == (Color)ColorConverter.ConvertFromString(StudentSettings.DefaultTodayColor)
+            ? Color.FromRgb(255, 231, 190) : todayColor);
         table.ColumnDefinitions.Add(new() { Width = new GridLength(78) });
         for (var col = 0; col < 7; col++) table.ColumnDefinitions.Add(new());
         table.RowDefinitions.Add(new() { Height = new GridLength(45) });

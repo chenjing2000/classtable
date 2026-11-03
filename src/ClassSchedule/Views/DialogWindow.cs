@@ -4,6 +4,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Effects;
+using System.Windows.Media.Animation;
 using System.Windows.Threading;
 using ClassSchedule.Core;
 
@@ -13,9 +14,8 @@ public class DialogWindow : Window
 {
     private const double NoticeGap = 8;
     private readonly DispatcherTimer timer = new() { Interval = TimeSpan.FromMilliseconds(100) };
-    private readonly Border notice;
-    private readonly TextBlock noticeText;
-    private readonly ScrollViewer noticeMessage;
+    private readonly StackPanel notices = new() { VerticalAlignment = VerticalAlignment.Bottom };
+    private Border? departingNotice;
     private readonly Border confirmation;
     private readonly StackPanel confirmationContent;
     private readonly ScrollViewer confirmationMessage;
@@ -35,38 +35,28 @@ public class DialogWindow : Window
         Title = title; Width = width; Height = height; MinWidth = 360; MinHeight = 300;
         WindowStartupLocation = WindowStartupLocation.CenterOwner; WindowSurface.Children.Add(Layout); Content = WindowSurface;
         SourceInitialized += (_, _) => WindowPlacement.DisableMaximize(this);
-        noticeText = Ui.Text(""); noticeText.FontSize = 14; noticeText.Foreground = new SolidColorBrush(Color.FromRgb(23, 34, 59));
-        noticeMessage = new ScrollViewer { Content = noticeText, MaxHeight = 110, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled };
-        notice = new Border
-        {
-            Name = "TransientNotice", Background = new SolidColorBrush(Color.FromRgb(255, 241, 210)) { Opacity = .65 },
-            Padding = new Thickness(10), CornerRadius = new CornerRadius(10), MaxWidth = 560,
-            HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Bottom, Visibility = Visibility.Collapsed,
-            Effect = new DropShadowEffect { Color = Colors.Black, BlurRadius = 6, ShadowDepth = 1, Opacity = .14 },
-            Child = noticeMessage
-        };
-        Panel.SetZIndex(notice, 2); WindowSurface.Children.Add(notice);
+        WindowSurface.ClipToBounds = true;
+        Panel.SetZIndex(notices, 2); WindowSurface.Children.Add(notices);
         confirmationMessage = new ScrollViewer { VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled };
         confirmationContent = new StackPanel();
         confirmation = new Border
         {
             Name = "ConfirmationNotice", Background = (Brush)FindResource("WindowBackground"), BorderBrush = new SolidColorBrush(Color.FromRgb(220, 230, 244)),
-            BorderThickness = new Thickness(1), Padding = new Thickness(10), CornerRadius = new CornerRadius(10), MaxWidth = 560,
-            HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Bottom, Visibility = Visibility.Collapsed,
+            BorderThickness = new Thickness(1), Padding = new Thickness(10), CornerRadius = new CornerRadius(10),
+            HorizontalAlignment = HorizontalAlignment.Stretch, VerticalAlignment = VerticalAlignment.Bottom, Visibility = Visibility.Collapsed,
             Effect = new DropShadowEffect { Color = Colors.Black, BlurRadius = 6, ShadowDepth = 1, Opacity = .14 }, Child = confirmationContent
         };
         Panel.SetZIndex(confirmation, 1); WindowSurface.Children.Add(confirmation);
         DockPanel.SetDock(Footer, Dock.Bottom); Layout.Children.Add(Footer);
         WindowSurface.SizeChanged += (_, _) => PositionNotifications();
         Footer.SizeChanged += (_, _) => PositionNotifications();
-        notice.SizeChanged += (_, _) => PositionNotifications();
         confirmation.SizeChanged += (_, _) => PositionNotifications();
         confirmation.IsVisibleChanged += (_, _) => PositionNotifications();
         PreviewMouseWheel += (_, e) =>
         {
             if (e.OriginalSource is not Visual source) return;
             var viewer = ReferenceEquals(source, confirmation) || confirmation.IsAncestorOf(source) ? confirmationMessage
-                : ReferenceEquals(source, notice) || notice.IsAncestorOf(source) ? noticeMessage : null;
+                : notices.IsAncestorOf(source) ? Ui.Ancestor<ScrollViewer>(source) : null;
             if (viewer is null) return;
             viewer.ScrollToVerticalOffset(viewer.VerticalOffset - e.Delta / 120.0 * 48);
             e.Handled = true;
@@ -102,40 +92,118 @@ public class DialogWindow : Window
             else Close();
             args.Handled = true;
         };
-        Closed += (_, _) => { timer.Stop(); timer.Tick -= Tick; Messages.Changed -= UpdateNotice; Messages.Dispose(); };
+        Closed += (_, _) => { timer.Stop(); timer.Tick -= Tick; Messages.Changed -= UpdateNotice; Messages.Dispose(); notices.Children.Clear(); };
     }
     protected void Body(UIElement element, bool scroll = true) => Layout.Children.Add(scroll ? new ScrollViewer { Content = element, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled } : element);
     private void Tick(object? sender, EventArgs e) => Messages.Advance();
+    private Border CreateNotice(NotificationQueue.Notice message)
+    {
+        var text = Ui.Text(message.Text, 14);
+        text.Foreground = new SolidColorBrush(Color.FromRgb(23, 34, 59));
+        var viewer = new ScrollViewer
+        {
+            Content = text, MaxHeight = 110, VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled
+        };
+        UIElement content = viewer;
+        if (message.Operation is not null)
+        {
+            var close = Ui.Button("×", () => Messages.DismissError(message), "关闭错误提示");
+            close.VerticalAlignment = VerticalAlignment.Top;
+            var row = new DockPanel();
+            DockPanel.SetDock(close, Dock.Right); row.Children.Add(close); row.Children.Add(viewer);
+            content = row;
+        }
+        return new Border
+        {
+            Name = "TransientNotice", Tag = message,
+            Background = new SolidColorBrush(Color.FromRgb(240, 240, 240)) { Opacity = .75 },
+            Padding = new Thickness(10), CornerRadius = new CornerRadius(10), Margin = new Thickness(0, NoticeGap, 0, 0),
+            Effect = new DropShadowEffect { Color = Colors.Black, BlurRadius = 6, ShadowDepth = 1, Opacity = .14 },
+            Child = content
+        };
+    }
+
     private void UpdateNotice()
     {
-        noticeText.Text = Messages.Current;
-        noticeMessage.ScrollToTop();
-        notice.Visibility = Messages.Current.Length == 0 ? Visibility.Collapsed : Visibility.Visible;
+        var previous = notices.Children.Cast<Border>().ToArray();
+        var visible = Messages.Visible;
+        var exiting = Messages.Exiting;
+        if (previous.Select(card => card.Tag).SequenceEqual(visible, ReferenceEqualityComparer.Instance)
+            && ReferenceEquals(departingNotice?.Tag, exiting)) return;
+
+        var offsets = previous.ToDictionary(card => card, card => card.TranslatePoint(new Point(), WindowSurface).Y);
+        notices.Children.Clear();
+        foreach (var message in visible)
+            notices.Children.Add(previous.FirstOrDefault(card => ReferenceEquals(card.Tag, message)) ?? CreateNotice(message));
+
+        bool newExit = !ReferenceEquals(departingNotice?.Tag, exiting);
+        if (newExit)
+        {
+            if (departingNotice is not null) WindowSurface.Children.Remove(departingNotice);
+            departingNotice = exiting is null ? null : previous.FirstOrDefault(card => ReferenceEquals(card.Tag, exiting)) ?? CreateNotice(exiting);
+            if (departingNotice is { } card)
+            {
+                card.IsHitTestVisible = false; card.VerticalAlignment = VerticalAlignment.Bottom;
+                Panel.SetZIndex(card, 2); WindowSurface.Children.Insert(WindowSurface.Children.IndexOf(notices), card);
+            }
+        }
+
         PositionNotifications();
+        if (!IsLoaded) return;
+        WindowSurface.UpdateLayout();
+        foreach (Border card in notices.Children)
+        {
+            if (!offsets.TryGetValue(card, out var oldTop)) continue;
+            card.RenderTransform = Transform.Identity;
+            var shift = oldTop - card.TranslatePoint(new Point(), WindowSurface).Y;
+            if (Math.Abs(shift) > .5) Slide(card, shift, 0);
+        }
+        if (newExit && departingNotice is { } outgoing)
+        {
+            outgoing.RenderTransform = Transform.Identity;
+            var top = outgoing.TranslatePoint(new Point(), WindowSurface).Y;
+            var shift = offsets.TryGetValue(outgoing, out var previousTop) ? previousTop - top : 0;
+            Slide(outgoing, shift, WindowSurface.ActualHeight - top);
+        }
     }
+
+    private static void Slide(Border card, double from, double to)
+    {
+        var transform = new TranslateTransform();
+        card.RenderTransform = transform;
+        transform.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(from, to, new Duration(NotificationQueue.ExitDuration)));
+    }
+
     private void PositionNotifications()
     {
         var footerHeight = Footer.Visibility == Visibility.Visible ? Footer.ActualHeight + Footer.Margin.Top + Footer.Margin.Bottom : 0;
         var bottom = Layout.Margin.Bottom + footerHeight + NoticeGap;
-        var available = Math.Max(0, WindowSurface.ActualHeight - bottom - 12);
+        var available = Math.Max(0, WindowSurface.ActualHeight - bottom - Layout.Margin.Top);
         var confirming = confirmation.Visibility == Visibility.Visible;
-        var notifying = notice.Visibility == Visibility.Visible;
-        var noticeLimit = confirming ? Math.Max(0, (available - NoticeGap) / 2) : available;
-        notice.MaxHeight = noticeLimit;
-        // Reserve space before the first measurement too, so a tall confirmation cannot starve a new error message.
-        var noticeHeight = notifying ? Math.Min(notice.ActualHeight > 0 ? notice.ActualHeight : noticeLimit, noticeLimit) : 0;
-        confirmation.Margin = new Thickness(16, 12, 16, bottom);
-        confirmation.MaxHeight = Math.Max(0, available - (confirming && notifying ? noticeHeight + NoticeGap : 0));
+        var notifying = notices.Children.Count > 0 || departingNotice is not null;
+        confirmation.Margin = new Thickness(Layout.Margin.Left, Layout.Margin.Top, Layout.Margin.Right, bottom);
+        confirmation.MaxHeight = confirming && notifying ? available / 2 : available;
         confirmationMessage.MaxHeight = Math.Max(0, confirmation.MaxHeight - confirmation.Padding.Top - confirmation.Padding.Bottom
             - confirmation.BorderThickness.Top - confirmation.BorderThickness.Bottom - (confirmationButtons?.ActualHeight ?? 0));
-        var confirmationHeight = confirming ? Math.Min(confirmation.ActualHeight, confirmation.MaxHeight) : 0;
-        notice.Margin = new Thickness(16, 12, 16, bottom + (confirming ? confirmationHeight + NoticeGap : 0));
+        var noticeBottom = confirming ? bottom + Math.Min(confirmation.ActualHeight, confirmation.MaxHeight) + NoticeGap : Layout.Margin.Bottom;
+        notices.Margin = new Thickness(Layout.Margin.Left, 0, Layout.Margin.Right, noticeBottom);
+        var noticeHeight = Math.Max(0, WindowSurface.ActualHeight - noticeBottom - Layout.Margin.Top);
+        var maxCardHeight = noticeHeight / Math.Max(1, notices.Children.Count);
+        foreach (Border card in notices.Children) card.MaxHeight = Math.Max(0, maxCardHeight - NoticeGap);
+        if (departingNotice is { } outgoing)
+        {
+            outgoing.Margin = notices.Margin;
+            outgoing.MaxHeight = noticeHeight;
+        }
     }
-    public bool Attempt(Action action)
+
+    public bool Attempt(Action action, object? operation = null)
     {
-        try { action(); return true; }
+        operation ??= action.Method;
+        try { action(); Messages.ResolveErrors(operation); return true; }
         catch (Exception ex) when (ex is InvalidDataException or IOException or UnauthorizedAccessException or ArgumentException or FormatException or OverflowException)
-        { Messages.Enqueue(ex.Message); return false; }
+        { Messages.Error(ex.Message, operation); return false; }
     }
     protected void Confirm(string text, Action accepted, string acceptText = "确定")
     {

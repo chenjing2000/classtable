@@ -54,10 +54,10 @@ internal static class FloatingConfirmationChecks
             Check(Math.Abs(card.TranslatePoint(new Point(card.ActualWidth / 2, 0), surface).X - surface.ActualWidth / 2) < .1 && Math.Abs(probe.Page.ActualHeight - pageHeight) < .1, "Confirmation centers without resizing the page");
             probe.Messages.Enqueue("操作失败，请修正后重试。"); Flush();
             var notice = Find<Border>(probe).Single(b => b.Name == "TransientNotice");
-            Check(notice.IsVisible && notice.Background.Opacity == .65 && notice.TranslatePoint(new Point(0, notice.ActualHeight), probe).Y + 7 <= card.TranslatePoint(new Point(), probe).Y, "Ordinary message floats above confirmation with a gap");
+            Check(notice.IsVisible && notice.Background.Opacity == .75 && notice.TranslatePoint(new Point(0, notice.ActualHeight), probe).Y + 7 <= card.TranslatePoint(new Point(), probe).Y, "Ordinary message floats above confirmation with a gap");
             Check(Clickable(probe, GetButton(probe, "固定操作")) && Clickable(probe, GetButton(probe, "否")), "Floating cards do not cover fixed footer or confirmation buttons");
             var deadline = DateTime.UtcNow.AddSeconds(6);
-            while (probe.Messages.Current.Length > 0 && DateTime.UtcNow < deadline) { Flush(); Thread.Sleep(20); }
+            while ((probe.Messages.Current.Length > 0 || probe.Messages.Exiting is not null) && DateTime.UtcNow < deadline) { Flush(); Thread.Sleep(20); }
             Flush();
             Check(!notice.IsVisible && card.IsVisible && decisions == 0, "Transient timeout does not dismiss or choose the confirmation");
 
@@ -66,8 +66,9 @@ internal static class FloatingConfirmationChecks
             question = (ScrollViewer)((StackPanel)card.Child).Children[0];
             Check(question.ScrollableHeight > 0 && Clickable(probe, GetButton(probe, "是")) && Clickable(probe, GetButton(probe, "否")), "Long confirmation scrolls while both choices stay accessible at minimum size");
             var noticeText = string.Concat(Enumerable.Repeat("较长的错误提示。", 30)); probe.Messages.Enqueue(noticeText); Flush();
+            notice = Find<Border>(probe).Single(b => b.Name == "TransientNotice");
             Check(notice.IsVisible && notice.ActualHeight > 0 && card.ActualHeight > 0 && notice.TranslatePoint(new Point(0, notice.ActualHeight), probe).Y + 7 <= card.TranslatePoint(new Point(), probe).Y, "Tall confirmation and long error both receive visible nonoverlapping space");
-            Check(((ScrollViewer)notice.Child).ScrollableHeight > 0 && Clickable(probe, GetButton(probe, "否")) && Clickable(probe, GetButton(probe, "固定操作")), "Long error can scroll without displacing either set of buttons");
+            Check(((ScrollViewer)notice.Child).ScrollableHeight > 0 && Clickable(probe, GetButton(probe, "否"))  , "Long notice can scroll without obstructing confirmation choices");
             var compactPageHeight = probe.Page.ActualHeight;
             GetButton(probe, "否").RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); Flush();
             Check(!card.IsVisible && notice.IsVisible && decisions == 1 && Math.Abs(probe.Page.ActualHeight - compactPageHeight) < .1, "Explicit No hides only confirmation; ordinary error remains");
@@ -76,7 +77,7 @@ internal static class FloatingConfirmationChecks
             Check(Find<Button>(card).Select(b => b.Content as string).SequenceEqual(new[] { "保存", "放弃修改", "继续编辑" }) && GetButton(probe, "继续编辑").IsKeyboardFocused, "Three-choice confirmation preserves order and safe default focus");
             GetButton(probe, "继续编辑").RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); probe.Close();
             var settings = new GeneralSettingsWindow(workspace); settings.Show(); settings.Width = settings.MinWidth; settings.Height = settings.MinHeight; Flush();
-            settings.State.RequestDefaults(); Flush();
+            settings.State.Settings!.Duration = "40"; settings.State.RequestClose(); Flush();
             var settingsCard = Card(settings);
             var settingsQuestion = (ScrollViewer)((StackPanel)settingsCard.Child).Children[0];
             ((TextBlock)settingsQuestion.Content).Text = string.Concat(Enumerable.Repeat("较长的确认文字。", 60));

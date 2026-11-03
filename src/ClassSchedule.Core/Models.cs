@@ -21,6 +21,8 @@ public sealed class StudentDocument
 
 public sealed class StudentSettings
 {
+    public const string DefaultTodayColor = "#FFF2D8";
+    public string TodayColor { get; set; } = DefaultTodayColor;
     [JsonRequired] public DateOnly FirstWeekMonday { get; set; }
     [JsonRequired] public int TotalWeeks { get; set; } = 20;
     [JsonRequired] public string SundayBelongsTo { get; set; } = "previous";

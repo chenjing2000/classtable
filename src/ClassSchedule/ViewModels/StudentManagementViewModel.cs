@@ -3,7 +3,7 @@ using ClassSchedule.Core;
 
 namespace ClassSchedule.ViewModels;
 
-public sealed class StudentManagementViewModel(WorkspaceViewModel workspace, Action<string>? report = null) : ObservableObject
+public sealed class StudentManagementViewModel(WorkspaceViewModel workspace, Action<IReadOnlyList<string>>? report = null) : ObservableObject
 {
     public List<string> Names => workspace.Names;
     public StudentSnapshot? Selected { get; private set; }
@@ -33,5 +33,5 @@ public sealed class StudentManagementViewModel(WorkspaceViewModel workspace, Act
         Select(null);
         Report(errors);
     }
-    private void Report(IEnumerable<string> errors) { foreach (var error in errors) report?.Invoke(error); }
+    private void Report(IReadOnlyList<string> errors) => report?.Invoke(errors);
 }
